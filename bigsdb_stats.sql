@@ -34,4 +34,24 @@ CREATE TABLE isolates (
 	ON UPDATE CASCADE
 );
 
-GRANT SELECT,UPDATE,INSERT,DELETE ON resources,sets,set_resources,isolates TO apache;
+CREATE TABLE genomes (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config),
+	CONSTRAINT g_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE sequences (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config),
+	CONSTRAINT s_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+GRANT SELECT,UPDATE,INSERT,DELETE ON resources,sets,set_resources,isolates,genomes,sequences TO apache;

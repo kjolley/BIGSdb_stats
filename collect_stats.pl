@@ -70,9 +70,9 @@ main();
 exit;
 
 sub main {
-
-	#	update_resources();
+	update_resources();
 	update_isolates();
+	update_sequences();
 	return;
 }
 
@@ -124,29 +124,61 @@ sub update_totals {
 sub update_isolates {
 	my ($options) = @_;
 	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
-	foreach my $config (@$resources) {
-		eval {
+	eval {
+		CONFIG: foreach my $config (@$resources)
+		{
 			my $data = get_record("$rest_url/db/$config");
-			if ( $data->{'fields'} ) {
-				my $fields = get_record( $data->{'fields'} );
-				foreach my $field (@$fields) {
-					if ( $field->{'name'} eq 'date_entered' && $field->{'breakdown'} ) {
-						my $breakdown = get_record( $field->{'breakdown'} );
-						$db->do( 'DELETE FROM isolates WHERE dbase_config=?', undef, $config );
-						foreach my $date ( keys %$breakdown ) {
-							$db->do( 'INSERT INTO isolates (datestamp,dbase_config,count) VALUES (?,?,?)',
-								undef, $date, $config, $breakdown->{$date} );
-						}
+			next CONFIG if !$data->{'fields'};
+			my $fields = get_record( $data->{'fields'} );
+		  FIELD: foreach my $field (@$fields) {
+				next FIELD if $field->{'name'} ne 'date_entered' || !$field->{'breakdown'};
+			  TYPE: foreach my $type (qw(isolates genomes)) {
+					my $clause = $type eq 'genomes' ? q(?genomes=1) : q();
+					my $breakdown = get_record( $field->{'breakdown'} . $clause );
+					$db->do( "DELETE FROM $type WHERE dbase_config=?", undef, $config );
+					foreach my $date ( keys %$breakdown ) {
+						$db->do( "INSERT INTO $type (datestamp,dbase_config,count) VALUES (?,?,?)",
+							undef, $date, $config, $breakdown->{$date} );
 					}
 				}
 			}
-		};
-		if ($@) {
-			$db->rollback;
-			die "$@\n";
 		}
-		$db->commit;
+	};
+	if ($@) {
+		$db->rollback;
+		die "$@\n";
 	}
+	$db->commit;
+	return;
+}
+
+sub update_sequences {
+	my ($options) = @_;
+	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
+	eval {
+		CONFIG: foreach my $config (@$resources)
+		{
+			my $data = get_record("$rest_url/db/$config");
+			next CONFIG if !$data->{'sequences'};
+			my $sequences = get_record( $data->{'sequences'} );
+			next CONFIG if !$sequences->{'fields'};
+			my $fields = get_record( $sequences->{'fields'} );
+		  FIELD: foreach my $field (@$fields) {
+				next FIELD if $field->{'name'} ne 'date_entered' || !$field->{'breakdown'};
+				my $breakdown = get_record( $field->{'breakdown'} );
+				$db->do( 'DELETE FROM sequences WHERE dbase_config=?', undef, $config );
+				foreach my $date ( keys %$breakdown ) {
+					$db->do( 'INSERT INTO sequences (datestamp,dbase_config,count) VALUES (?,?,?)',
+						undef, $date, $config, $breakdown->{$date} );
+				}
+			}
+		}
+	};
+	if ($@) {
+		$db->rollback;
+		die "$@\n";
+	}
+	$db->commit;
 	return;
 }
 
