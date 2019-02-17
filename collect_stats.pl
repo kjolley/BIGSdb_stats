@@ -42,15 +42,19 @@ use constant IGNORE_GROUP       => 'test';
 use constant PASSWORD_PROTECTED_DB => 'pubmlst_rmlst_seqdef';
 my %opts;
 GetOptions(
-	'bigsdb_url=s' => \$opts{'bigsdb_url'},
-	'database=s'   => \$opts{'database'},
-	'help'         => \$opts{'help'},
-	'host=s'       => \$opts{'host'},
-	'password=s'   => \$opts{'password'},
-	'port=i'       => \$opts{'port'},
-	'setup_access' => \$opts{'setup'},
-	'url=s'        => \$opts{'url'},
-	'user=s'       => \$opts{'user'},
+	'bigsdb_url=s'   => \$opts{'bigsdb_url'},
+	'database=s'     => \$opts{'database'},
+	'format=s'       => \$opts{'format'},
+	'help'           => \$opts{'help'},
+	'host=s'         => \$opts{'host'},
+	'ignore_group=s' => \$opts{'ignore_group'},
+	'password=s'     => \$opts{'password'},
+	'port=i'         => \$opts{'port'},
+	'setup_access'   => \$opts{'setup'},
+	'stats=s'        => \$opts{'stats'},
+	'update'         => \$opts{'update'},
+	'url=s'          => \$opts{'url'},
+	'user=s'         => \$opts{'user'},
 ) or die("Error in command line arguments\n");
 if ( $opts{'help'} ) {
 	show_help();
@@ -65,27 +69,97 @@ if ( $opts{'setup'} ) {
 	get_access_token();
 	exit;
 }
+my %allowed_formats = map { $_ => 1 } qw(JSON TSV);
+$opts{'format'} //= 'JSON';
+if ( !$allowed_formats{ $opts{'format'} } ) {
+	die "Invalid format.\n";
+}
 my $db = db_connect();
 main();
 exit;
 
 sub main {
-	update_resources();
-	update_isolates();
-	update_sequences();
+	if ( $opts{'update'} ) {
+		update_resources();
+		update_isolates();
+		update_sequences();
+	}
+	if ( $opts{'stats'} ) {
+		output_stats();
+	}
 	return;
 }
 
+sub output_stats {
+	if ( $opts{'stats'} eq 'date' ) {
+		output_date_analysis();
+		return;
+	}
+	die "Invalid stats option.\n";
+}
+
+sub output_date_analysis {
+	$db->do('CREATE TEMP TABLE date_output AS SELECT i.datestamp,r.set_name,i.count AS isolates,'
+		  . 'g.count AS genomes FROM set_resources r JOIN isolates i ON r.dbase_config=i.dbase_config '
+		  . 'LEFT JOIN genomes g ON i.datestamp=g.datestamp AND i.dbase_config=g.dbase_config LEFT JOIN '
+		  . 'sequences s ON r.dbase_config=s.dbase_config' );
+	$db->do('ALTER TABLE date_output ADD sequences int');
+	$db->do('ALTER TABLE date_output ADD PRIMARY KEY(datestamp,set_name)');
+	my $seq_data = run_query(
+		'SELECT s.datestamp,r.set_name,s.count FROM sequences s JOIN set_resources r ON s.dbase_config=r.dbase_config',
+		undef,
+		{ fetch => 'all_arrayref', slice => {} }
+	);
+	foreach my $seq_record (@$seq_data) {
+		$db->do(
+			'INSERT INTO date_output (datestamp,set_name,sequences) VALUES (?,?,?) '
+			  . 'ON CONFLICT (datestamp,set_name) DO UPDATE SET sequences=?',
+			undef, @{$seq_record}{qw(datestamp set_name count count)}
+		);
+	}
+	my $data =
+	  run_query( 'SELECT * FROM date_output ORDER BY datestamp', undef, { fetch => 'all_arrayref', slice => {} } );
+	if ( $opts{'format'} eq 'JSON' ) {
+		say encode_json($data);
+	} else {
+		say qq(datestamp\tset_name\tisolates\tgenomes\tsequences);
+		foreach my $record (@$data) {
+			my @values = @{$record}{qw(datestamp set_name isolates genomes sequences)};
+			$_ //= 0 foreach @values;
+			local $" = qq(\t);
+			say qq(@values);
+		}
+	}
+	return;
+}
+
+sub get_ignore_config_list {
+	$opts{' ignore_group '} //= q();
+	my @passed_list = split /,/x, $opts{' ignore_group '};
+	my %ignore_group = map { $_ => 1 } ( IGNORE_GROUP, @passed_list );
+	my $list         = [];
+	my $data         = get_record($rest_url);
+	foreach my $group (@$data) {
+		if ( $ignore_group{ $group->{' name '} } ) {
+			foreach my $resource ( @{ $group->{' databases '} } ) {
+				push @$list, $resource->{' name '};
+			}
+		}
+	}
+	return $list;
+}
+
 sub update_resources {
-	my %ignore = map { $_ => 1 } IGNORE_GROUP;
-	my $data = get_record($rest_url);
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my $data               = get_record($rest_url);
 	eval {
 		foreach my $group (@$data) {
-			next if $ignore{ $group->{'name'} };
-			foreach my $database ( @{ $group->{'databases'} } ) {
+			foreach my $database ( @{ $group->{' databases '} } ) {
+				next if $ignore{ $database->{' name '} };
 				$db->do(
-					'INSERT INTO resources (dbase_config,description) VALUES (?,?) '
-					  . 'ON CONFLICT (dbase_config) DO UPDATE SET description=?',
+					' INSERT INTO resources( dbase_config, description ) VALUES(?,?) '
+					  . ' ON CONFLICT(dbase_config) DO UPDATE SET description = ?',
 					undef, @{$database}{qw(name description description)}
 				);
 				if ( $database->{'description'} =~ /(.+)\s(?:isolates|specimens|sequence\/profile\ definitions)$/x ) {
@@ -123,10 +197,13 @@ sub update_totals {
 
 sub update_isolates {
 	my ($options) = @_;
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore = map { $_ => 1 } @$ignore_config_list;
 	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
 	eval {
 		CONFIG: foreach my $config (@$resources)
 		{
+			next CONFIG if $ignore{$config};
 			my $data = get_record("$rest_url/db/$config");
 			next CONFIG if !$data->{'fields'};
 			my $fields = get_record( $data->{'fields'} );
@@ -154,10 +231,13 @@ sub update_isolates {
 
 sub update_sequences {
 	my ($options) = @_;
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore = map { $_ => 1 } @$ignore_config_list;
 	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
 	eval {
 		CONFIG: foreach my $config (@$resources)
 		{
+			next CONFIG if $ignore{$config};
 			my $data = get_record("$rest_url/db/$config");
 			next CONFIG if !$data->{'sequences'};
 			my $sequences = get_record( $data->{'sequences'} );
@@ -486,6 +566,9 @@ ${bold}--bigsdb_url$norm [${under}URL$norm]
 
 ${bold}--database$norm [${under}DATABASE$norm]
     Name of the stats database.
+    
+${bold}--format$norm [${under}FORMAT$norm]
+    Output format. Allowed values: JSON, TSV (default JSON).
 
 ${bold}--help$norm
     This help page.
@@ -493,6 +576,9 @@ ${bold}--help$norm
 ${bold}--host$norm [${under}HOST$norm]
     Database host.
     
+${bold}--ignore_group$norm [${under}GROUP$norm]
+    Comma separated list of database configurations to ignore.
+      
 ${bold}--password$norm [${under}PASSWORD$norm]
     Database user password.
     
@@ -501,6 +587,12 @@ ${bold}--port$norm [${under}PORT$norm]
 
 ${bold}--setup_access$norm
     Authenticate and delegate access to retrieve an access token.
+    
+${bold}--stats$norm [${under}FUNCTION$norm]
+    Output stats. Available option: date
+    
+${bold}--update$norm
+	Update stats database.
     
 ${bold}--url$norm [${under}URL$norm]
     URL of the REST API.
