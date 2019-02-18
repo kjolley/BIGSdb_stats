@@ -22,7 +22,6 @@ $(function() {
 });
 
 function load_chart_top_hit(taxon, div, data) {
-	console.log('#c3_chart' + div);
 	var chart = c3.generate({
 		bindto : '#c3_chart' + div,
 		title : {
@@ -30,29 +29,28 @@ function load_chart_top_hit(taxon, div, data) {
 		},
 		data : {
 			x : 'date',
-			xFormat : '%Y-%m-%d',
 			columns : [ [ 'date' ].concat(data.date),
 					[ 'isolates' ].concat(data.isolates),
-					[ 'genomes'].concat(data.genomes) ,
-					[ 'alleles' ].concat(data.sequences)],
-					
+					[ 'genomes' ].concat(data.genomes),
+					[ 'alleles' ].concat(data.sequences) ],
 			type : 'bar',
-			groups : [ [ 'isolates', 'genomes','alleles' ] ],
-			colors: {
-				isolates: '#4a4',
-				genomes: '#a44',
-				alleles: '#44a'
+			groups : [ [ 'isolates', 'genomes', 'alleles' ] ],
+			colors : {
+				isolates : '#4a4',
+				genomes : '#a44',
+				alleles : '#44a'
 			}
 		},
-
 		axis : {
 			x : {
 				type : 'category',
-				tick: {
-					culling: true,
+				tick : {
+					culling : true,
+					rotate : 0,
+					multiline : false,
+					count : 2
 				},
 			}
-
 		},
 		legend : {
 			show : true
@@ -67,18 +65,15 @@ function load_chart_top_hit(taxon, div, data) {
 				}
 			}
 		},
-		onrendered: function(){
-			d3.selectAll(".c3-axis.c3-axis-x .tick text").style("display","none");
-		}
 	});
-	$(".c3-title").css("font-weight", "600");
-	
+	$("#c3_chart" + div + " .c3-title").css("font-weight", "600");
 }
 
 function get_taxa_data(parsed_tsv, taxon, start_date) {
 	var date = [];
 	var last_date = new Date(start_date);
 	var current_date = new Date();
+	current_date.setHours(0, 0, 0, 0);
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
@@ -106,7 +101,7 @@ function get_taxa_data(parsed_tsv, taxon, start_date) {
 			last_date = new Date(this[0]);
 		}
 	});
-	while (last_date <= current_date) {
+	while (last_date < current_date) {
 		last_date.setDate(last_date.getDate() + 1);
 		date.push(last_date.getFullYear() + "-"
 				+ ("0" + (last_date.getMonth() + 1)).slice(-2) + "-"
@@ -115,12 +110,11 @@ function get_taxa_data(parsed_tsv, taxon, start_date) {
 		isolates.push(0);
 		genomes.push(0);
 		sequences.push(0);
-		
 	}
 	return {
 		date : date,
 		isolates : isolates,
-		genomes: genomes,
+		genomes : genomes,
 		sequences : sequences
 	};
 }
@@ -165,38 +159,38 @@ function sortPropertiesDesc(obj) {
 	return sortable;
 }
 
-//function load_chart_cumulative(url, start_date) {
+// function load_chart_cumulative(url, start_date) {
 //
-//	Papa.parse(url, {
-//		download : true,
-//		skipEmptyLines : true,
-//		complete : function(parsed) {
-//			var date = [];
-//			var isolates = [];
-//			var current_date = '';
-//			var date_isolates = 0;
-//			$.each(parsed.data.slice(0), function() {
-//				if (this[0] == 'datestamp') {
-//					return false; // header row
-//				}
-//				if (this[0] >= start_date) {
-//					if (this[0] != current_date) {
-//						date.push(this[0]);
-//						current_date = this[0];
-//						if (date.length > 1) {
-//							isolates.push(date_isolates);
-//						}
-//						date_isolates = +this[2];
+// Papa.parse(url, {
+// download : true,
+// skipEmptyLines : true,
+// complete : function(parsed) {
+// var date = [];
+// var isolates = [];
+// var current_date = '';
+// var date_isolates = 0;
+// $.each(parsed.data.slice(0), function() {
+// if (this[0] == 'datestamp') {
+// return false; // header row
+// }
+// if (this[0] >= start_date) {
+// if (this[0] != current_date) {
+// date.push(this[0]);
+// current_date = this[0];
+// if (date.length > 1) {
+// isolates.push(date_isolates);
+// }
+// date_isolates = +this[2];
 //
-//					} else {
-//						date_isolates += +this[2];
-//					}
-//				}
+// } else {
+// date_isolates += +this[2];
+// }
+// }
 //
-//			});
-//			isolates.push(date_isolates);
-//			console.log(date);
-//			console.log(isolates);
-//		}
-//	});
-//}
+// });
+// isolates.push(date_isolates);
+// console.log(date);
+// console.log(isolates);
+// }
+// });
+// }
