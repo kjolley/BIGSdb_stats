@@ -150,15 +150,14 @@ function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 			last_date.setDate(last_date.getDate() + 1);
 		}
 	});
-	while (last_date < current_date) {
-		last_date.setDate(last_date.getDate() + 1);
+	while (last_date <= current_date) {		
 		date.push(last_date.getFullYear() + "-"
 				+ ("0" + (last_date.getMonth() + 1)).slice(-2) + "-"
 				+ ("0" + last_date.getDate()).slice(-2));
-
 		isolates.push(0);
 		genomes.push(0);
 		sequences.push(0);
+		last_date.setDate(last_date.getDate() + 1);
 	}
 	return {
 		date : date,
@@ -178,7 +177,6 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
-	var weeks_finished = {};
 	var this_week_genomes = 0;
 	var this_week_isolates = 0;
 	var this_week_sequences = 0;
@@ -216,13 +214,84 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 			}
 		}
 	});
-	while (current_week > last_week) {
-		last_date.setDate(last_date.getDate() + 7);
-		last_week = last_date.getWeek();
+	while (last_week <= current_week ) {
 		date.push(last_week);
-		isolates.push(0);
-		genomes.push(0);
-		sequences.push(0);
+		isolates.push(this_week_isolates);
+		genomes.push(this_week_genomes);
+		sequences.push(this_week_sequences);
+		this_week_isolates = 0;
+		this_week_genomes = 0;
+		this_week_sequences = 0;
+		last_week = last_date.getWeek();
+		last_date.setDate(last_date.getDate() + 7);
+	}
+
+	return {
+		date : date,
+		isolates : isolates,
+		genomes : genomes,
+		sequences : sequences
+	};
+}
+
+function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
+	var date = [];
+	var last_date = new Date(start_date);
+	var last_month = last_date.getMonthYear();
+	var current_date = new Date();
+	var current_month = current_date.getMonthYear();
+	current_date.setHours(0, 0, 0, 0);
+	var isolates = [];
+	var genomes = [];
+	var sequences = [];
+	var this_month_genomes = 0;
+	var this_month_isolates = 0;
+	var this_month_sequences = 0;
+	var this_month;
+	$.each(parsed_tsv, function() {
+		if (this[1] != taxon) {
+			return true;
+		}
+		if (this[0] >= start_date) {
+			var this_date = new Date(this[0]);
+			this_month = this_date.getMonthYear();
+			if (this_month > last_month) {
+				date.push(last_month);
+				isolates.push(this_month_isolates);
+				genomes.push(this_month_genomes);
+				sequences.push(this_month_sequences);
+				this_month_isolates = 0;
+				this_month_genomes = 0;
+				this_month_sequences = 0;
+				last_date.setMonth(last_date.getMonth() + 1);
+				last_month = last_date.getMonthYear();
+				while (this_month > last_month) {
+					date.push(last_month);
+					isolates.push(0);
+					genomes.push(0);
+					sequences.push(0);
+					last_date.setMonth(last_date.getMonth() + 1);
+					last_month = last_date.getMonthYear();
+				}
+			}
+			if (this_month == last_month) {
+				this_month_isolates += +this[2];
+				this_month_genomes += +this[3];
+				this_month_sequences += +this[4];
+			}
+		}
+	});
+	while (last_month <= current_month) {
+		date.push(last_month);
+		isolates.push(this_month_isolates);
+		genomes.push(this_month_genomes);
+		sequences.push(this_month_sequences);
+		this_month_isolates = 0;
+		this_month_genomes = 0;
+		this_month_sequences = 0;
+		last_date.setMonth(last_date.getMonth() + 1);
+		last_month = last_date.getMonthYear();
+
 	}
 
 	return {
@@ -331,4 +400,9 @@ Date.prototype.getWeekYear = function() {
 	var date = new Date(this.getTime());
 	date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
 	return date.getFullYear();
+}
+
+Date.prototype.getMonthYear = function() {
+	var date = new Date(this.getTime());
+	return date.getFullYear() + "-" + ("0" + (date.getMonth() + 1)).slice(-2);
 }

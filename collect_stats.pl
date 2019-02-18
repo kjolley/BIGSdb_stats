@@ -140,9 +140,9 @@ sub get_ignore_config_list {
 	my $list         = [];
 	my $data         = get_record($rest_url);
 	foreach my $group (@$data) {
-		if ( $ignore_group{ $group->{' name '} } ) {
-			foreach my $resource ( @{ $group->{' databases '} } ) {
-				push @$list, $resource->{' name '};
+		if ( $ignore_group{ $group->{'name'} } ) {
+			foreach my $resource ( @{ $group->{'databases'} } ) {
+				push @$list, $resource->{'name'};
 			}
 		}
 	}
@@ -500,7 +500,7 @@ sub get_protected_route {
 			die "Access denied - client is unauthorized.\n";
 		}
 		if ( ( $decoded_json->{'status'} // q() ) eq '401' ) {
-			say 'Invalid session token, requesting new one.';
+#			say 'Invalid session token, requesting new one.';
 			get_session_token();
 			return get_protected_route($uri);
 		}
