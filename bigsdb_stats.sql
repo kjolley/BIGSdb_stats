@@ -24,34 +24,67 @@ CREATE TABLE set_resources (
 	ON UPDATE CASCADE
 );
 
-CREATE TABLE isolates (
+CREATE TABLE isolates_date_entered (
 	datestamp date NOT NULL,
 	dbase_config text NOT NULL,
 	count int NOT NULL,
 	PRIMARY KEY (datestamp,dbase_config),
-	CONSTRAINT i_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	CONSTRAINT ide_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
 	ON DELETE CASCADE
 	ON UPDATE CASCADE
 );
 
-CREATE TABLE genomes (
+CREATE TABLE isolates_last_modified (
 	datestamp date NOT NULL,
 	dbase_config text NOT NULL,
 	count int NOT NULL,
 	PRIMARY KEY (datestamp,dbase_config),
-	CONSTRAINT g_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	CONSTRAINT ilm_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
 	ON DELETE CASCADE
 	ON UPDATE CASCADE
 );
 
-CREATE TABLE sequences (
+
+CREATE TABLE genomes_date_entered (
 	datestamp date NOT NULL,
 	dbase_config text NOT NULL,
 	count int NOT NULL,
 	PRIMARY KEY (datestamp,dbase_config),
-	CONSTRAINT s_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	CONSTRAINT gde_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
 	ON DELETE CASCADE
 	ON UPDATE CASCADE
 );
 
-GRANT SELECT,UPDATE,INSERT,DELETE ON resources,sets,set_resources,isolates,genomes,sequences TO apache;
+CREATE TABLE genomes_last_modified (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config),
+	CONSTRAINT glm_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE sequences_date_entered (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config),
+	CONSTRAINT sde_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE sequences_last_modified (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config),
+	CONSTRAINT slm_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+GRANT SELECT,UPDATE,INSERT,DELETE ON resources,sets,set_resources,isolates_date_entered,
+isolates_last_modified,genomes_date_entered,genomes_last_modified,sequences_date_entered,
+sequences_last_modified TO apache;

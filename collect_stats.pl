@@ -91,22 +91,33 @@ sub main {
 }
 
 sub output_stats {
-	if ( $opts{'stats'} eq 'date' ) {
-		output_date_analysis();
+	if ( $opts{'stats'} eq 'datestamp' ) {
+		output_date_analysis( { type => 'datestamp' } );
+		return;
+	}
+	if ( $opts{'stats'} eq 'date_entered' ) {
+		output_date_analysis( { type => 'date_entered' } );
 		return;
 	}
 	die "Invalid stats option.\n";
 }
 
 sub output_date_analysis {
+	my ($options) = @_;
+	my %table = (
+		date_entered => 'date_entered',
+		datestamp    => 'last_modified'
+	);
+	my $type = $options->{'type'} // 'datestamp';
 	$db->do('CREATE TEMP TABLE date_output AS SELECT i.datestamp,r.set_name,i.count AS isolates,'
-		  . 'g.count AS genomes FROM set_resources r JOIN isolates i ON r.dbase_config=i.dbase_config '
-		  . 'LEFT JOIN genomes g ON i.datestamp=g.datestamp AND i.dbase_config=g.dbase_config LEFT JOIN '
-		  . 'sequences s ON r.dbase_config=s.dbase_config' );
+		  . "g.count AS genomes FROM set_resources r JOIN isolates_$table{$type} i ON r.dbase_config=i.dbase_config "
+		  . "LEFT JOIN genomes_$table{$type} g ON i.datestamp=g.datestamp AND i.dbase_config=g.dbase_config LEFT JOIN "
+		  . "sequences_$table{$type} s ON r.dbase_config=s.dbase_config" );
 	$db->do('ALTER TABLE date_output ADD sequences int');
 	$db->do('ALTER TABLE date_output ADD PRIMARY KEY(datestamp,set_name)');
 	my $seq_data = run_query(
-		'SELECT s.datestamp,r.set_name,s.count FROM sequences s JOIN set_resources r ON s.dbase_config=r.dbase_config',
+		"SELECT s.datestamp,r.set_name,s.count FROM sequences_$table{$type} s "
+		  . 'JOIN set_resources r ON s.dbase_config=r.dbase_config',
 		undef,
 		{ fetch => 'all_arrayref', slice => {} }
 	);
@@ -155,8 +166,8 @@ sub update_resources {
 	my $data               = get_record($rest_url);
 	eval {
 		foreach my $group (@$data) {
-			foreach my $database ( @{ $group->{' databases '} } ) {
-				next if $ignore{ $database->{' name '} };
+			foreach my $database ( @{ $group->{'databases'} } ) {
+				next if $ignore{ $database->{'name'} };
 				$db->do(
 					' INSERT INTO resources( dbase_config, description ) VALUES(?,?) '
 					  . ' ON CONFLICT(dbase_config) DO UPDATE SET description = ?',
@@ -200,6 +211,10 @@ sub update_isolates {
 	my $ignore_config_list = get_ignore_config_list();
 	my %ignore = map { $_ => 1 } @$ignore_config_list;
 	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
+	my %table = (
+		date_entered => 'date_entered',
+		datestamp    => 'last_modified'
+	);
 	eval {
 		CONFIG: foreach my $config (@$resources)
 		{
@@ -207,15 +222,19 @@ sub update_isolates {
 			my $data = get_record("$rest_url/db/$config");
 			next CONFIG if !$data->{'fields'};
 			my $fields = get_record( $data->{'fields'} );
-		  FIELD: foreach my $field (@$fields) {
-				next FIELD if $field->{'name'} ne 'date_entered' || !$field->{'breakdown'};
-			  TYPE: foreach my $type (qw(isolates genomes)) {
-					my $clause = $type eq 'genomes' ? q(?genomes=1) : q();
-					my $breakdown = get_record( $field->{'breakdown'} . $clause );
-					$db->do( "DELETE FROM $type WHERE dbase_config=?", undef, $config );
-					foreach my $date ( keys %$breakdown ) {
-						$db->do( "INSERT INTO $type (datestamp,dbase_config,count) VALUES (?,?,?)",
-							undef, $date, $config, $breakdown->{$date} );
+		  FIELDNAME: foreach my $field_name (qw( date_entered datestamp)) {
+			  FIELD: foreach my $field (@$fields) {
+					next FIELD if $field->{'name'} ne $field_name || !$field->{'breakdown'};
+				  TYPE: foreach my $type (qw(isolates genomes)) {
+						my $clause = $type eq 'genomes' ? q(?genomes=1) : q();
+						my $breakdown = get_record( $field->{'breakdown'} . $clause );
+						$db->do( "DELETE FROM ${type}_$table{$field_name} WHERE dbase_config=?", undef, $config );
+						foreach my $date ( keys %$breakdown ) {
+							$db->do(
+								"INSERT INTO ${type}_$table{$field_name} (datestamp,dbase_config,count) VALUES (?,?,?)",
+								undef, $date, $config, $breakdown->{$date}
+							);
+						}
 					}
 				}
 			}
@@ -233,6 +252,10 @@ sub update_sequences {
 	my ($options) = @_;
 	my $ignore_config_list = get_ignore_config_list();
 	my %ignore = map { $_ => 1 } @$ignore_config_list;
+	my %table = (
+		date_entered => 'date_entered',
+		datestamp    => 'last_modified'
+	);
 	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
 	eval {
 		CONFIG: foreach my $config (@$resources)
@@ -243,13 +266,16 @@ sub update_sequences {
 			my $sequences = get_record( $data->{'sequences'} );
 			next CONFIG if !$sequences->{'fields'};
 			my $fields = get_record( $sequences->{'fields'} );
-		  FIELD: foreach my $field (@$fields) {
-				next FIELD if $field->{'name'} ne 'date_entered' || !$field->{'breakdown'};
-				my $breakdown = get_record( $field->{'breakdown'} );
-				$db->do( 'DELETE FROM sequences WHERE dbase_config=?', undef, $config );
-				foreach my $date ( keys %$breakdown ) {
-					$db->do( 'INSERT INTO sequences (datestamp,dbase_config,count) VALUES (?,?,?)',
-						undef, $date, $config, $breakdown->{$date} );
+		  FIELDNAME: foreach my $field_name (qw( date_entered datestamp)) {
+			  FIELD: foreach my $field (@$fields) {
+					next FIELD if $field->{'name'} ne $field_name || !$field->{'breakdown'};
+					my $breakdown = get_record( $field->{'breakdown'} );
+					$db->do( "DELETE FROM sequences_$table{$field_name} WHERE dbase_config=?", undef, $config );
+					foreach my $date ( keys %$breakdown ) {
+						$db->do(
+							"INSERT INTO sequences_$table{$field_name} (datestamp,dbase_config,count) VALUES (?,?,?)",
+							undef, $date, $config, $breakdown->{$date} );
+					}
 				}
 			}
 		}
@@ -500,7 +526,8 @@ sub get_protected_route {
 			die "Access denied - client is unauthorized.\n";
 		}
 		if ( ( $decoded_json->{'status'} // q() ) eq '401' ) {
-#			say 'Invalid session token, requesting new one.';
+
+			#			say 'Invalid session token, requesting new one.';
 			get_session_token();
 			return get_protected_route($uri);
 		}

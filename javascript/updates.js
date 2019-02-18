@@ -1,28 +1,29 @@
 $(function() {
+	read_data_and_create_charts();
+	$('#state').on("change", function(){
+		read_data_and_create_charts();
+	});
+});
 
-	var period = get_period();
-	console.log(period);
-
-
-
-	Papa.parse('/updates/date.tsv', {
+function read_data_and_create_charts(){
+	var period = $('#period').val();
+	var state = $('#state').val();
+	
+	Papa.parse('/updates/' + state + '.tsv', {
 		download : true,
 		skipEmptyLines : true,
 		complete : function(parsed) {
 			create_charts(parsed.data.slice(0));
-			var period_radio = $('input[name="period"]');
-			period_radio.on("change", function() {
+			$('#period').off("change").on("change", function() {
 				create_charts(parsed.data.slice(0));
-				console.log('change');
 			});
 		}
 	})
-});
+}
 
 function create_charts(data){
-	var period = get_period();
+	var period = $('#period').val();
 	var start_date = get_start_date();
-//	console.log(start_date);
 	var list = get_ranked_sets(data, start_date, 5);
 
 	var div = 0;
@@ -40,14 +41,12 @@ function create_charts(data){
 			chart_data = get_monthly_taxa_data(data, this,
 					start_date);
 		}
-		console.log(chart_data);
 		load_chart_top_hit(this, div, chart_data);
-
 	});
 }
 
 function get_start_date() {
-	var period = get_period();
+	var period = $('#period').val();
 	var start_time = new Date();
 	if (period == 'past_month') {
 		start_time.setDate(start_time.getDate() - 30);
@@ -59,15 +58,6 @@ function get_start_date() {
 	return start_time.getFullYear() + "-"
 			+ ("0" + (start_time.getMonth() + 1)).slice(-2) + "-"
 			+ ("0" + start_time.getDate()).slice(-2);
-}
-
-function get_period() {
-	var field_type_radio = $('input[name="period"]');
-	var checked = field_type_radio.filter(function() {
-		return $(this).prop('checked');
-	});
-	var period = checked.val();
-	return period;
 }
 
 function load_chart_top_hit(taxon, div, data) {
