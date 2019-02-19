@@ -17,29 +17,22 @@
 use strict;
 use warnings;
 use 5.010;
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use BIGSdbRestClient;
 use Config::Tiny;
 use DBI;
 use Getopt::Long qw(:config no_ignore_case);
-use Data::Random qw(rand_chars);
-use HTTP::Request::Common;
-use LWP::UserAgent;
-use JSON;
 use Term::Cap;
 use POSIX;
-use Net::OAuth 0.20;
-$Net::OAuth::PROTOCOL_VERSION = Net::OAuth::PROTOCOL_VERSION_1_0A;
-use constant DEFAULT_REST_URL   => 'http://rest.pubmlst.org';
-use constant DEFAULT_BIGSDB_URL => 'https://pubmlst.org/bigsdb';
 use constant STATS_DB           => 'bigsdb_stats';
 use constant HOST               => 'zoo-aberlour';
 use constant PORT               => 5432;
 use constant USER               => 'apache';
 use constant PASSWORD           => undef;                          #Better to set in .pgpass file or pass as option
-use constant KEY_FILE           => '~/.api_key';
+use constant DEFAULT_REST_URL   => 'http://rest.pubmlst.org';
+use constant DEFAULT_BIGSDB_URL => 'https://pubmlst.org/bigsdb';
 use constant IGNORE_GROUP       => 'test';
-
-#Need any protected database in order to delegate authority
-use constant PASSWORD_PROTECTED_DB => 'pubmlst_rmlst_seqdef';
 my %opts;
 GetOptions(
 	'bigsdb_url=s'   => \$opts{'bigsdb_url'},
@@ -56,17 +49,21 @@ GetOptions(
 	'url=s'          => \$opts{'url'},
 	'user=s'         => \$opts{'user'},
 ) or die("Error in command line arguments\n");
+
 if ( $opts{'help'} ) {
 	show_help();
 	exit;
 }
-my $ua         = LWP::UserAgent->new;
-my $rest_url   = $opts{'url'} // DEFAULT_REST_URL;
-my $bigsdb_url = $opts{'bigsdb_db'} // DEFAULT_BIGSDB_URL;
+$opts{'url'}        //= DEFAULT_REST_URL;
+$opts{'bigsdb_url'} //= DEFAULT_BIGSDB_URL;
+my $client = BIGSdbRestClient->new(
+	{
+		rest_url   => $opts{'url'},
+		bigsdb_url => $opts{'bigsdb_url'}
+	}
+);
 if ( $opts{'setup'} ) {
-	my ($request_token) = glob('~/.request_token');
-	unlink $request_token;
-	get_access_token();
+	$client->get_access_token;
 	exit;
 }
 my %allowed_formats = map { $_ => 1 } qw(JSON TSV);
@@ -144,26 +141,10 @@ sub output_date_analysis {
 	return;
 }
 
-sub get_ignore_config_list {
-	$opts{' ignore_group '} //= q();
-	my @passed_list = split /,/x, $opts{' ignore_group '};
-	my %ignore_group = map { $_ => 1 } ( IGNORE_GROUP, @passed_list );
-	my $list         = [];
-	my $data         = get_record($rest_url);
-	foreach my $group (@$data) {
-		if ( $ignore_group{ $group->{'name'} } ) {
-			foreach my $resource ( @{ $group->{'databases'} } ) {
-				push @$list, $resource->{'name'};
-			}
-		}
-	}
-	return $list;
-}
-
 sub update_resources {
 	my $ignore_config_list = get_ignore_config_list();
 	my %ignore             = map { $_ => 1 } @$ignore_config_list;
-	my $data               = get_record($rest_url);
+	my $data               = $client->get_record( $opts{'url'} );
 	eval {
 		foreach my $group (@$data) {
 			foreach my $database ( @{ $group->{'databases'} } ) {
@@ -190,12 +171,28 @@ sub update_resources {
 	return;
 }
 
+sub get_ignore_config_list {
+	$opts{'ignore_group'} //= q();
+	my @passed_list = split /,/x, $opts{'ignore_group'};
+	my %ignore_group = map { $_ => 1 } ( IGNORE_GROUP, @passed_list );
+	my $list         = [];
+	my $data         = $client->get_record( $opts{'url'} );
+	foreach my $group (@$data) {
+		if ( $ignore_group{ $group->{'name'} } ) {
+			foreach my $resource ( @{ $group->{'databases'} } ) {
+				push @$list, $resource->{'name'};
+			}
+		}
+	}
+	return $list;
+}
+
 sub update_totals {
 	my ($database) = @_;
-	my $data = get_record( $database->{'href'} );
+	my $data = $client->get_record( $database->{'href'} );
 	foreach my $type (qw(isolates genomes sequences)) {
 		if ( $data->{$type} ) {
-			my $type_record = get_record( $data->{$type} );
+			my $type_record = $client->get_record( $data->{$type} );
 			$db->do(
 				"UPDATE sets SET $type=? WHERE name=(SELECT set_name FROM set_resources WHERE dbase_config=?)",
 				undef, $type_record->{'records'},
@@ -219,15 +216,15 @@ sub update_isolates {
 		CONFIG: foreach my $config (@$resources)
 		{
 			next CONFIG if $ignore{$config};
-			my $data = get_record("$rest_url/db/$config");
+			my $data = $client->get_record("$opts{'url'}/db/$config");
 			next CONFIG if !$data->{'fields'};
-			my $fields = get_record( $data->{'fields'} );
+			my $fields = $client->get_record( $data->{'fields'} );
 		  FIELDNAME: foreach my $field_name (qw( date_entered datestamp)) {
 			  FIELD: foreach my $field (@$fields) {
 					next FIELD if $field->{'name'} ne $field_name || !$field->{'breakdown'};
 				  TYPE: foreach my $type (qw(isolates genomes)) {
 						my $clause = $type eq 'genomes' ? q(?genomes=1) : q();
-						my $breakdown = get_record( $field->{'breakdown'} . $clause );
+						my $breakdown = $client->get_record( $field->{'breakdown'} . $clause );
 						$db->do( "DELETE FROM ${type}_$table{$field_name} WHERE dbase_config=?", undef, $config );
 						foreach my $date ( keys %$breakdown ) {
 							$db->do(
@@ -261,15 +258,15 @@ sub update_sequences {
 		CONFIG: foreach my $config (@$resources)
 		{
 			next CONFIG if $ignore{$config};
-			my $data = get_record("$rest_url/db/$config");
+			my $data = $client->get_record("$opts{'url'}/db/$config");
 			next CONFIG if !$data->{'sequences'};
-			my $sequences = get_record( $data->{'sequences'} );
+			my $sequences = $client->get_record( $data->{'sequences'} );
 			next CONFIG if !$sequences->{'fields'};
-			my $fields = get_record( $sequences->{'fields'} );
+			my $fields = $client->get_record( $sequences->{'fields'} );
 		  FIELDNAME: foreach my $field_name (qw( date_entered datestamp)) {
 			  FIELD: foreach my $field (@$fields) {
 					next FIELD if $field->{'name'} ne $field_name || !$field->{'breakdown'};
-					my $breakdown = get_record( $field->{'breakdown'} );
+					my $breakdown = $client->get_record( $field->{'breakdown'} );
 					$db->do( "DELETE FROM sequences_$table{$field_name} WHERE dbase_config=?", undef, $config );
 					foreach my $date ( keys %$breakdown ) {
 						$db->do(
@@ -301,239 +298,6 @@ sub db_connect {
 	};
 	die "$@\n" if $@;
 	return $dbh;
-}
-
-sub get_key {
-	my ($file) = glob(KEY_FILE);
-	if ( !-e $file ) {
-		die "$file does not exist.\n";
-	}
-	my $config = Config::Tiny->new();
-	$config = Config::Tiny->read($file);
-	return ( $config->{_}->{'key'}, $config->{_}->{'secret'} );
-}
-
-sub retrieve_token {
-	my ($token_name) = @_;
-	my ($full_path)  = glob("~/.$token_name");
-	return if !-e $full_path;
-	my $config = Config::Tiny->new();
-	$config = Config::Tiny->read($full_path);
-	return ( $config->{_}->{'token'}, $config->{_}->{'secret'} );
-}
-
-sub write_token {
-	my ( $token_name, $token, $secret ) = @_;
-	my ($full_path) = glob("~/.$token_name");
-	my $config = Config::Tiny->new();
-	$config->{_}->{'token'}  = $token;
-	$config->{_}->{'secret'} = $secret;
-	$config->write($full_path);
-	return;
-}
-
-sub get_request_token {
-	my $protected_db = PASSWORD_PROTECTED_DB;
-	my ( $key, $secret ) = get_key();
-	my $request = Net::OAuth->request('request token')->new(
-		consumer_key     => $key,
-		consumer_secret  => $secret,
-		request_url      => "$rest_url/db/$protected_db/oauth/get_request_token",
-		request_method   => 'GET',
-		signature_method => 'HMAC-SHA1',
-		timestamp        => time,
-		nonce            => join( '', rand_chars( size => 16, set => 'alphanumeric' ) ),
-		callback         => 'oob'
-	);
-	$request->sign;
-
-	#say $request->signature_base_string;
-	die "COULDN'T VERIFY! Check OAuth parameters.\n" unless $request->verify;
-	say 'Getting request token...';
-	my $res = $ua->request( GET $request->to_url, Content_Type => 'application/json', );
-	my $decoded_json = decode_json( $res->content );
-	my $request_response;
-	if ( $res->is_success ) {
-		say 'Success.';
-		$request_response = Net::OAuth->response('request token')->from_hash($decoded_json);
-		return $request_response;
-	} else {
-		die "Failed to get request token.\n";
-	}
-}
-
-sub get_access_token {
-	my ( $request_token, $request_secret ) = @_;
-	my ( $key,           $secret )         = get_key();
-	my $protected_db = PASSWORD_PROTECTED_DB;
-	unlink 'access_token';
-	if ( !$request_token || $request_secret ) {
-		my $session_response = get_request_token();
-		( $request_token, $request_secret ) = ( $session_response->token, $session_response->token_secret );
-	}
-	say "\nNow log in at\n"
-	  . "$bigsdb_url?db=$protected_db&page=authorizeClient&oauth_token=$request_token"
-	  . "\nto obtain a verification code.";
-	print "\nPlease enter verification code:  ";
-	my $verifier = <>;
-	chomp $verifier;
-	my $request = Net::OAuth->request('access token')->new(
-		consumer_key     => $key,
-		consumer_secret  => $secret,
-		token            => $request_token,
-		token_secret     => $request_secret,
-		verifier         => $verifier,
-		request_url      => "$rest_url/db/$protected_db/oauth/get_access_token",
-		request_method   => 'GET',
-		signature_method => 'HMAC-SHA1',
-		timestamp        => time,
-		nonce            => join( '', rand_chars( size => 16, set => 'alphanumeric' ) ),
-	);
-	$request->sign;
-	die "COULDN'T VERIFY! Check OAuth parameters.\n" unless $request->verify;
-	say "\nGetting access token...";
-	unlink 'request_token';    #Request tokens can only be redeemed once
-	my $res = $ua->request( GET $request->to_url, Content_Type => 'application/json' );
-	my $decoded_json = decode_json( $res->content );
-
-	if ( $res->is_success ) {
-		say 'Success.';
-		my $access_response = Net::OAuth->response('access token')->from_hash($decoded_json);
-		write_token( 'access_token', $access_response->token, $access_response->token_secret );
-		return $access_response;
-	} else {
-		die "Failed to get access token.\n";
-	}
-}
-
-sub get_session_token {
-	my ( $access_token, $access_secret ) = @_;
-	state $failed = 0;
-	my ( $key, $secret ) = get_key();
-	my $protected_db = PASSWORD_PROTECTED_DB;
-	if ( !$access_token || $access_secret ) {
-		( $access_token, $access_secret ) = retrieve_token('access_token');
-		if ( !$access_token || !$access_secret ) {
-			my $session_response = get_access_token();
-			( $access_token, $access_secret ) = ( $session_response->token, $session_response->token_secret );
-		}
-	}
-	my $request = Net::OAuth->request('protected resource')->new(
-		consumer_key     => $key,
-		consumer_secret  => $secret,
-		token            => $access_token,
-		token_secret     => $access_secret,
-		request_url      => "$rest_url/db/$protected_db/oauth/get_session_token",
-		request_method   => 'GET',
-		signature_method => 'HMAC-SHA1',
-		timestamp        => time,
-		nonce            => join( '', rand_chars( size => 16, set => 'alphanumeric' ) ),
-	);
-	$request->sign;
-	die "COULDN'T VERIFY! Check OAuth parameters.\n" unless $request->verify;
-	my $res = $ua->request( GET $request->to_url, Content_Type => 'application/json' );
-	my $decoded_json = decode_json( $res->content );
-	if ( $res->is_success ) {
-		my $session_response = Net::OAuth->response('access token')->from_hash($decoded_json);
-		write_token( 'session_token', $session_response->token, $session_response->token_secret );
-		return $session_response;
-	} else {
-		say 'Failed:';
-		if ( $res->{'_content'} =~ /401/ ) {
-			$failed++;
-			exit if $failed == 2;
-			say 'Invalid access token, requesting new one...';
-			my $access_response = get_access_token();
-			if ($access_response) {
-				( $access_token, $access_secret ) = ( $access_response->token, $access_response->token_secret );
-			}
-			return get_session_token( $access_token, $access_secret );
-		} else {
-			return;
-		}
-	}
-}
-
-sub get_record {
-	my ($uri) = @_;
-	my $response;
-	my $requires_authorization;
-	my $config = q();
-	state %authenticated_dbs;
-	if ( $uri =~ /$rest_url\/db\/([\w\d\-_]+)/x ) {
-		$config = $1;
-	}
-	if ( !$authenticated_dbs{$config} ) {
-		for my $attempt ( 1 .. 30 ) {
-			$response = $ua->get($uri);
-			last if $response->is_success || $response->code == 401 || $response->code == 404;
-			my ( $code, $msg ) = ( $response->code, $response->message );
-			say "Error retrieving $uri: Response $code: $msg. Will retry in 1s.";
-			sleep 1;
-		}
-		if ( $response->is_success ) {
-			my $data;
-			eval { $data = decode_json( $response->decoded_content ); };
-			BIGSdb::Exception::Data->throw('Data is not JSON') if $@;
-			return $data;
-		} else {
-			if ( $response->code == 401 ) {
-				$requires_authorization = 1;
-			} else {
-				my ( $code, $msg ) = ( $response->code, $response->message );
-				die "Error retrieving $uri: Response $code: $msg\n";
-			}
-		}
-	} else {
-		$requires_authorization = 1;
-	}
-	if ($requires_authorization) {
-		$authenticated_dbs{$config} = 1;
-		return get_protected_route($uri);
-	}
-	die "Cannot retrieve $uri.\n";
-}
-
-sub get_protected_route {
-	my ($uri) = @_;
-	my ( $key,           $secret )         = get_key();
-	my ( $session_token, $session_secret ) = retrieve_token('session_token');
-	if ( !$session_token ) {
-		get_session_token();
-		( $session_token, $session_secret ) = retrieve_token('session_token');
-	}
-	my $request = Net::OAuth->request('protected resource')->new(
-		consumer_key     => $key,
-		consumer_secret  => $secret,
-		token            => $session_token,
-		token_secret     => $session_secret,
-		request_url      => $uri,
-		request_method   => 'GET',
-		signature_method => 'HMAC-SHA1',
-		timestamp        => time,
-		nonce            => join( '', rand_chars( size => 16, set => 'alphanumeric' ) ),
-	);
-	$request->sign;
-	die "Cannot verify signature.\n" unless $request->verify;
-	my $res = $ua->get( $request->to_url );
-	my $decoded_json;
-	eval { $decoded_json = decode_json( $res->content ) };
-	if ($@) {
-		die $res->content . "\n";
-	}
-	if ( ref $decoded_json eq 'HASH' ) {
-		if ( ( $decoded_json->{'message'} // q() ) =~ /Client\ is\ unauthorized/x ) {
-			die "Access denied - client is unauthorized.\n";
-		}
-		if ( ( $decoded_json->{'status'} // q() ) eq '401' ) {
-
-			#			say 'Invalid session token, requesting new one.';
-			get_session_token();
-			return get_protected_route($uri);
-		}
-	}
-	die "Invalid JSON.\n" if !ref $decoded_json;
-	return $decoded_json;
 }
 
 sub run_query {

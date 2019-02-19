@@ -332,42 +332,6 @@ function sortPropertiesDesc(obj) {
 	return sortable;
 }
 
-// function load_chart_cumulative(url, start_date) {
-//
-// Papa.parse(url, {
-// download : true,
-// skipEmptyLines : true,
-// complete : function(parsed) {
-// var date = [];
-// var isolates = [];
-// var current_date = '';
-// var date_isolates = 0;
-// $.each(parsed.data.slice(0), function() {
-// if (this[0] == 'datestamp') {
-// return false; // header row
-// }
-// if (this[0] >= start_date) {
-// if (this[0] != current_date) {
-// date.push(this[0]);
-// current_date = this[0];
-// if (date.length > 1) {
-// isolates.push(date_isolates);
-// }
-// date_isolates = +this[2];
-//
-// } else {
-// date_isolates += +this[2];
-// }
-// }
-//
-// });
-// isolates.push(date_isolates);
-// console.log(date);
-// console.log(isolates);
-// }
-// });
-// }
-
 // Source: https://weeknumber.net/how-to/javascript
 Date.prototype.getWeek = function() {
 	var date = new Date(this.getTime());

@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<meta name="Description" content="Multilocus sequence typing (MLST) databases and software" />
+<meta name="viewport" content="width=device-width" />
+<title>Recent database updates</title>
+<style type="text/css" media="screen">@import "/style.css";</style>
+<style type="text/css" media="screen">@import "/css/jquery-ui.css";</style>
+<style type="text/css" media="print">@import "/print.css";</style>
+<style type="text/css" media="screen">@import "/css/c3.css";</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" type="text/Javascript"></script>
+<script src="https://code.jquery.com/ui/1.10.3/jquery-ui.js" type="text/Javascript"></script>
+<script src="/javascript/d3.v5.min.js"></script>
+<script src="/javascript/c3.min.js"></script>
+<script src="/javascript/papaparse.min.js"></script>
+<script src="/javascript/updates.js"></script>
+<script src="/pubmlst.js" type="text/Javascript"></script>
+<script type="text/Javascript">
+  $(function() {
+  	$( "#tabs" ).tabs();
+  });
+</script>
+</head>
+
+<body>
+<!--#include virtual="/topbar.html" -->
+
+<div class="expand_content">
+<div class="panel" id="mainpanel">
+
+  <h1>Database update activity</h1>
+  <p>Charts show the databases with the most activity in the selected time period.<p>
+ <label for="period">Period:</label>
+ <select name="period" id="period" style="margin-right:2em">
+   <option value="past_month">past month</option>
+   <option value="past_year">past year</option>
+   <option value="past_5_years">past five years</option>
+ </select>
+ <label for="period">State:</label>
+ <select name="state" id="state" style="margin-right:2em">
+   <option value="datestamp">records last modified</option>
+   <option value="date_entered">records added</option>
+ </select>
+</li>
+<div id="c3_chart1" style="width:95%;height:200px"></div>
+<div id="c3_chart2" style="width:95%;height:200px"></div>
+<div id="c3_chart3" style="width:95%;height:200px"></div>
+<div id="c3_chart4" style="width:95%;height:200px"></div>
+<div id="c3_chart5" style="width:95%;height:200px"></div>
+
+<div class="panel" id="infopanel">
+<h2>Latest updates</h2>
+<!--#include virtual="/recent.html" -->
+</div>
+</body>
+</html>
