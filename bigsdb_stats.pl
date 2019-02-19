@@ -24,6 +24,7 @@ use Config::Tiny;
 use DBI;
 use Getopt::Long qw(:config no_ignore_case);
 use Term::Cap;
+use JSON;
 use POSIX;
 use constant STATS_DB           => 'bigsdb_stats';
 use constant HOST               => 'zoo-aberlour';

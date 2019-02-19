@@ -9,7 +9,7 @@ function read_data_and_create_charts(){
 	var period = $('#period').val();
 	var state = $('#state').val();
 	
-	Papa.parse('/updates/' + state + '.tsv', {
+	Papa.parse('/tmp/' + state + '.tsv', {
 		download : true,
 		skipEmptyLines : true,
 		complete : function(parsed) {
