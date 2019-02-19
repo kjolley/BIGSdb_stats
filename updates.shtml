@@ -17,11 +17,6 @@
 <script src="/javascript/papaparse.min.js"></script>
 <script src="/javascript/updates.js"></script>
 <script src="/pubmlst.js" type="text/Javascript"></script>
-<script type="text/Javascript">
-  $(function() {
-  	$( "#tabs" ).tabs();
-  });
-</script>
 </head>
 
 <body>
@@ -31,19 +26,19 @@
 <div class="panel" id="mainpanel">
 
   <h1>Database update activity</h1>
-  <p>Charts show the databases with the most activity in the selected time period.<p>
+  <p>Charts show the databases with the most activity in the selected time period.</p>
  <label for="period">Period:</label>
  <select name="period" id="period" style="margin-right:2em">
    <option value="past_month">past month</option>
    <option value="past_year">past year</option>
    <option value="past_5_years">past five years</option>
  </select>
- <label for="period">State:</label>
+ <label for="state">State:</label>
  <select name="state" id="state" style="margin-right:2em">
    <option value="datestamp">records last modified</option>
    <option value="date_entered">records added</option>
  </select>
-</li>
+
 <div id="c3_chart1" style="width:95%;height:200px"></div>
 <div id="c3_chart2" style="width:95%;height:200px"></div>
 <div id="c3_chart3" style="width:95%;height:200px"></div>
@@ -53,6 +48,6 @@
 <div class="panel" id="infopanel">
 <h2>Latest updates</h2>
 <!--#include virtual="/recent.html" -->
-</div>
+</div></div></div>
 </body>
 </html>

@@ -38,6 +38,7 @@ my %opts;
 GetOptions(
 	'bigsdb_url=s'   => \$opts{'bigsdb_url'},
 	'database=s'     => \$opts{'database'},
+	'days=i'         => \$opts{'days'},
 	'format=s'       => \$opts{'format'},
 	'help'           => \$opts{'help'},
 	'host=s'         => \$opts{'host'},
@@ -57,6 +58,7 @@ if ( $opts{'help'} ) {
 }
 $opts{'url'}        //= DEFAULT_REST_URL;
 $opts{'bigsdb_url'} //= DEFAULT_BIGSDB_URL;
+$opts{'days'}       //= 3;
 my $client = BIGSdbRestClient->new(
 	{
 		rest_url   => $opts{'url'},
@@ -81,6 +83,7 @@ sub main {
 		update_resources();
 		update_isolates();
 		update_sequences();
+		update_profiles();
 	}
 	if ( $opts{'stats'} ) {
 		output_stats();
@@ -97,7 +100,134 @@ sub output_stats {
 		output_date_analysis( { type => 'date_entered' } );
 		return;
 	}
+	if ( $opts{'stats'} eq 'links' ) {
+		output_recent_links();
+		return;
+	}
 	die "Invalid stats option.\n";
+}
+
+sub output_recent_links {
+	my $date_list = get_list_of_dates();
+	foreach my $date (@$date_list) {
+		my $sets = get_dbase_set_updated_on($date);
+		say qq(<b>$date</b>);
+		say q(<ul>);
+		foreach my $set_name (@$sets) {
+			say qq(<li>$set_name:<ul>);
+			my $set_updates = get_set_updates( $set_name, $date );
+			say qq(<li>$_</li>) foreach @$set_updates;
+			say q(</ul></li>);
+		}
+		say q(</ul>);
+	}
+	return;
+}
+
+sub get_set_updates {
+	my ( $set_name, $date ) = @_;
+	my @tables = qw(isolates_last_modified genomes_last_modified sequences_last_modified);
+	my %name   = (
+		isolates_last_modified  => 'isolate',
+		genomes_last_modified   => 'genome',
+		sequences_last_modified => 'allele'
+	);
+	my $set_resources   = run_query( 'SELECT * FROM set_resources', undef, { fetch => 'all_arrayref', slice => {} } );
+	my $isolate_configs = {};
+	my $seqdef_configs  = {};
+	foreach my $set (@$set_resources) {
+		$seqdef_configs->{ $set->{'set_name'} }  = $set->{'dbase_config'} if $set->{'dbase_config'} =~ /seqdef$/x;
+		$isolate_configs->{ $set->{'set_name'} } = $set->{'dbase_config'} if $set->{'dbase_config'} =~ /isolates$/x;
+	}
+	my $list = [];
+	foreach my $table (@tables) {
+		my $count = run_query(
+			"SELECT SUM(count) FROM $table t JOIN set_resources s ON "
+			  . 't.dbase_config=s.dbase_config WHERE (s.set_name,t.datestamp)=(?,?)',
+			[ $set_name, $date ]
+		);
+		if ($count) {
+			my $plural = $count == 1 ? q() : q(s);
+			my $url;
+			if ( $table eq 'isolates_last_modified' && $isolate_configs->{$set_name} ) {
+				$url = qq(/bigsdb?db=$isolate_configs->{$set_name}&amp;page=query&amp;)
+				  . qq(prov_field1=datestamp&amp;prov_operator1==&amp;prov_value1=$date&amp;submit=1);
+			} elsif ( $table eq 'sequences_last_modified' && $seqdef_configs->{$set_name} ) {
+				$url = qq(/bigsdb?db=$seqdef_configs->{$set_name}&amp;page=tableQuery&amp;)
+				  . qq(table=sequences&amp;s1=datestamp&amp;y1==&amp;t1=$date&amp;submit=1);
+			}
+			my $link;
+			if ($url) {
+				$link .= qq(<a href="$url">);
+			}
+			$link .= qq($count $name{$table}$plural);
+			if ($url) {
+				$link .= q(</a>);
+			}
+			push @$list, $link;
+		}
+	}
+	my $profile_date = run_query(
+		'SELECT SUM(count) AS count,scheme,scheme_id FROM profiles_last_modified t JOIN set_resources s ON '
+		  . 't.dbase_config=s.dbase_config WHERE (s.set_name,t.datestamp)=(?,?) GROUP BY scheme,scheme_id ORDER BY scheme',
+		[ $set_name, $date ],
+		{ fetch => 'all_arrayref', slice => {} }
+	);
+	my %scheme_name = ( 'Ribosomal MLST' => 'rMLST' );
+	foreach my $scheme (@$profile_date) {
+		my $name = $scheme_name{ $scheme->{'scheme'} } // $scheme->{'scheme'};
+		my $plural = $scheme->{'count'} == 1 ? q() : q(s);
+		my $link;
+		my $url;
+		if ( $seqdef_configs->{$set_name} ) {
+			$url = qq(/bigsdb?db=$seqdef_configs->{$set_name}&amp;page=query&amp;)
+			  . qq(scheme_id=$scheme->{'scheme_id'}&amp;s1=datestamp&amp;y1==&amp;t1=$date&amp;submit=1);
+		}
+		if ($url) {
+			$link .= qq(<a href="$url">);
+		}
+		$link .= qq($scheme->{'count'} $name profile$plural);
+		if ($url) {
+			$link .= q(</a>);
+		}
+		push @$list, $link;
+	}
+	return $list;
+}
+
+sub get_dbase_set_updated_on {
+	my ($date) = @_;
+	my @tables = qw(isolates_last_modified genomes_last_modified profiles_last_modified sequences_last_modified);
+	my $list   = {};
+	foreach my $table (@tables) {
+		my $table_list = run_query(
+			"SELECT DISTINCT(s.set_name) FROM $table t JOIN set_resources s ON "
+			  . 't.dbase_config=s.dbase_config WHERE t.datestamp=?',
+			$date,
+			{ fetch => 'col_arrayref' }
+		);
+		$list->{$_} = 1 foreach @$table_list;
+	}
+	return [ sort keys %$list ];
+}
+
+sub get_list_of_dates {
+	my @tables = qw(isolates_last_modified genomes_last_modified profiles_last_modified sequences_last_modified);
+	my $list   = {};
+	foreach my $table (@tables) {
+		my $table_list =
+		  run_query( "SELECT DISTINCT(datestamp) FROM $table ORDER BY datestamp desc LIMIT $opts{'days'}",
+			undef, { fetch => 'col_arrayref' } );
+		$list->{$_} = 1 foreach @$table_list;
+	}
+	my $limited_list = [];
+	my $i            = 0;
+	foreach my $date ( reverse sort keys %$list ) {
+		push @$limited_list, $date;
+		$i++;
+		last if $i == $opts{'days'};
+	}
+	return $limited_list;
 }
 
 sub output_date_analysis {
@@ -112,6 +242,7 @@ sub output_date_analysis {
 		  . "LEFT JOIN genomes_$table{$type} g ON i.datestamp=g.datestamp AND i.dbase_config=g.dbase_config LEFT JOIN "
 		  . "sequences_$table{$type} s ON r.dbase_config=s.dbase_config" );
 	$db->do('ALTER TABLE date_output ADD sequences int');
+	$db->do('ALTER TABLE date_output ADD profiles int');
 	$db->do('ALTER TABLE date_output ADD PRIMARY KEY(datestamp,set_name)');
 	my $seq_data = run_query(
 		"SELECT s.datestamp,r.set_name,s.count FROM sequences_$table{$type} s "
@@ -119,10 +250,24 @@ sub output_date_analysis {
 		undef,
 		{ fetch => 'all_arrayref', slice => {} }
 	);
+
 	foreach my $seq_record (@$seq_data) {
 		$db->do(
 			'INSERT INTO date_output (datestamp,set_name,sequences) VALUES (?,?,?) '
 			  . 'ON CONFLICT (datestamp,set_name) DO UPDATE SET sequences=?',
+			undef, @{$seq_record}{qw(datestamp set_name count count)}
+		);
+	}
+	my $profile_data = run_query(
+		"SELECT p.datestamp,r.set_name,SUM(p.count) AS count FROM profiles_$table{$type} p "
+		  . 'JOIN set_resources r ON p.dbase_config=r.dbase_config GROUP BY r.set_name,p.datestamp',
+		undef,
+		{ fetch => 'all_arrayref', slice => {} }
+	);
+	foreach my $seq_record (@$profile_data) {
+		$db->do(
+			'INSERT INTO date_output (datestamp,set_name,profiles) VALUES (?,?,?) '
+			  . 'ON CONFLICT (datestamp,set_name) DO UPDATE SET profiles=?',
 			undef, @{$seq_record}{qw(datestamp set_name count count)}
 		);
 	}
@@ -131,9 +276,9 @@ sub output_date_analysis {
 	if ( $opts{'format'} eq 'JSON' ) {
 		say encode_json($data);
 	} else {
-		say qq(datestamp\tset_name\tisolates\tgenomes\tsequences);
+		say qq(datestamp\tset_name\tisolates\tgenomes\tsequences\tprofiles);
 		foreach my $record (@$data) {
-			my @values = @{$record}{qw(datestamp set_name isolates genomes sequences)};
+			my @values = @{$record}{qw(datestamp set_name isolates genomes sequences profiles)};
 			$_ //= 0 foreach @values;
 			local $" = qq(\t);
 			say qq(@values);
@@ -234,6 +379,48 @@ sub update_isolates {
 							);
 						}
 					}
+				}
+			}
+		}
+	};
+	if ($@) {
+		$db->rollback;
+		die "$@\n";
+	}
+	$db->commit;
+	return;
+}
+
+sub update_profiles {
+	my ($options) = @_;
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore = map { $_ => 1 } @$ignore_config_list;
+	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
+	my %table = (
+		date_entered => 'date_entered',
+		datestamp    => 'last_modified'
+	);
+	eval {
+		CONFIG: foreach my $config (@$resources)
+		{
+			next CONFIG if $ignore{$config};
+			my $data = $client->get_record("$opts{'url'}/db/$config");
+			next CONFIG if !$data->{'sequences'};    #Not a profiles database
+			next CONFIG if !$data->{'schemes'};      #Not a profiles database
+		  FIELDNAME: foreach my $field_name (qw( date_entered datestamp)) {
+				my $breakdown = $client->get_record( $data->{'schemes'} . "/breakdown/$field_name" );
+				$db->do( "DELETE FROM profiles_$table{$field_name} WHERE dbase_config=?", undef, $config );
+				foreach my $date (@$breakdown) {
+					$db->do(
+						"INSERT INTO profiles_$table{$field_name} (datestamp,dbase_config,scheme,scheme_id,count) "
+						  . 'VALUES (?,?,?,?,?)',
+						undef,
+						$date->{$field_name},
+						$config,
+						$date->{'name'},
+						$date->{'scheme_id'},
+						$date->{'count'}
+					);
 				}
 			}
 		}
@@ -359,6 +546,9 @@ ${bold}--bigsdb_url$norm [${under}URL$norm]
 ${bold}--database$norm [${under}DATABASE$norm]
     Name of the stats database.
     
+${bold}--days$norm [${under}DAYS$norm]
+    Number of days to produce link for. Default:3.
+    
 ${bold}--format$norm [${under}FORMAT$norm]
     Output format. Allowed values: JSON, TSV (default JSON).
 
@@ -381,7 +571,7 @@ ${bold}--setup_access$norm
     Authenticate and delegate access to retrieve an access token.
     
 ${bold}--stats$norm [${under}FUNCTION$norm]
-    Output stats. Available option: date
+    Output stats. Available options: date, links
     
 ${bold}--update$norm
 	Update stats database.

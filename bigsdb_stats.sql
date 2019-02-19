@@ -85,6 +85,30 @@ CREATE TABLE sequences_last_modified (
 	ON UPDATE CASCADE
 );
 
+CREATE TABLE profiles_date_entered (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	scheme text NOT NULL,
+	scheme_id int NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config,scheme),
+	CONSTRAINT pde_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
+CREATE TABLE profiles_last_modified (
+	datestamp date NOT NULL,
+	dbase_config text NOT NULL,
+	scheme text NOT NULL,
+	scheme_id int NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (datestamp,dbase_config,scheme),
+	CONSTRAINT plm_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
 GRANT SELECT,UPDATE,INSERT,DELETE ON resources,sets,set_resources,isolates_date_entered,
 isolates_last_modified,genomes_date_entered,genomes_last_modified,sequences_date_entered,
-sequences_last_modified TO apache;
+sequences_last_modified,profiles_date_entered,profiles_last_modified TO apache;

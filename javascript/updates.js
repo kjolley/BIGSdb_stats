@@ -1,14 +1,14 @@
 $(function() {
 	read_data_and_create_charts();
-	$('#state').on("change", function(){
+	$('#state').on("change", function() {
 		read_data_and_create_charts();
 	});
 });
 
-function read_data_and_create_charts(){
+function read_data_and_create_charts() {
 	var period = $('#period').val();
 	var state = $('#state').val();
-	
+
 	Papa.parse('/tmp/' + state + '.tsv', {
 		download : true,
 		skipEmptyLines : true,
@@ -21,7 +21,7 @@ function read_data_and_create_charts(){
 	})
 }
 
-function create_charts(data){
+function create_charts(data) {
 	var period = $('#period').val();
 	var start_date = get_start_date();
 	var list = get_ranked_sets(data, start_date, 5);
@@ -32,14 +32,11 @@ function create_charts(data){
 
 		var chart_data;
 		if (period == 'past_month') {
-			chart_data = get_daily_taxa_data(data, this,
-					start_date);
+			chart_data = get_daily_taxa_data(data, this, start_date);
 		} else if (period == 'past_year') {
-			chart_data = get_weekly_taxa_data(data, this,
-					start_date);
+			chart_data = get_weekly_taxa_data(data, this, start_date);
 		} else if (period == 'past_5_years') {
-			chart_data = get_monthly_taxa_data(data, this,
-					start_date);
+			chart_data = get_monthly_taxa_data(data, this, start_date);
 		}
 		load_chart_top_hit(this, div, chart_data);
 	});
@@ -52,8 +49,8 @@ function get_start_date() {
 		start_time.setDate(start_time.getDate() - 30);
 	} else if (period == 'past_year') {
 		start_time.setDate(start_time.getDate() - 365);
-	} else if (period == 'past_5_years'){
-		start_time.setDate(start_time.getDate() - 365*5);
+	} else if (period == 'past_5_years') {
+		start_time.setDate(start_time.getDate() - 365 * 5);
 	}
 	return start_time.getFullYear() + "-"
 			+ ("0" + (start_time.getMonth() + 1)).slice(-2) + "-"
@@ -71,14 +68,17 @@ function load_chart_top_hit(taxon, div, data) {
 			columns : [ [ 'date' ].concat(data.date),
 					[ 'isolates' ].concat(data.isolates),
 					[ 'genomes' ].concat(data.genomes),
+					[ 'profiles' ].concat(data.profiles),
 					[ 'alleles' ].concat(data.sequences) ],
 			type : 'bar',
-			groups : [ [ 'isolates', 'genomes', 'alleles' ] ],
+			groups : [ [ 'isolates', 'genomes', 'profiles', 'alleles' ] ],
 			colors : {
 				isolates : '#4a4',
 				genomes : '#a44',
+				profiles : '#a4a',
 				alleles : '#44a'
-			}
+			},
+			order: null
 		},
 		axis : {
 			x : {
@@ -116,6 +116,7 @@ function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
+	var profiles = [];
 	$.each(parsed_tsv, function() {
 
 		if (this[1] != taxon) {
@@ -130,30 +131,34 @@ function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 				isolates.push(0);
 				genomes.push(0);
 				sequences.push(0);
+				profiles.push(0);
 				last_date.setDate(last_date.getDate() + 1);
 			}
 			date.push(this[0]);
 			isolates.push(+this[2]);
 			genomes.push(+this[3]);
 			sequences.push(+this[4]);
+			profiles.push(+this[5]);
 			last_date = new Date(this[0]);
 			last_date.setDate(last_date.getDate() + 1);
 		}
 	});
-	while (last_date <= current_date) {		
+	while (last_date <= current_date) {
 		date.push(last_date.getFullYear() + "-"
 				+ ("0" + (last_date.getMonth() + 1)).slice(-2) + "-"
 				+ ("0" + last_date.getDate()).slice(-2));
 		isolates.push(0);
 		genomes.push(0);
 		sequences.push(0);
+		profiles.push(0);
 		last_date.setDate(last_date.getDate() + 1);
 	}
 	return {
 		date : date,
 		isolates : isolates,
 		genomes : genomes,
-		sequences : sequences
+		sequences : sequences,
+		profiles : profiles
 	};
 }
 
@@ -167,9 +172,11 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
+	var profiles = [];
 	var this_week_genomes = 0;
 	var this_week_isolates = 0;
 	var this_week_sequences = 0;
+	var this_week_profiles = 0;
 	var this_week;
 	$.each(parsed_tsv, function() {
 		if (this[1] != taxon) {
@@ -183,9 +190,11 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 				isolates.push(this_week_isolates);
 				genomes.push(this_week_genomes);
 				sequences.push(this_week_sequences);
+				profiles.push(this_week_profiles);
 				this_week_isolates = 0;
 				this_week_genomes = 0;
 				this_week_sequences = 0;
+				this_week_profiles = 0;
 				last_date.setDate(last_date.getDate() + 7);
 				last_week = last_date.getWeek();
 				while (this_week > last_week) {
@@ -193,6 +202,7 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 					isolates.push(0);
 					genomes.push(0);
 					sequences.push(0);
+					profiles.push(0);
 					last_date.setDate(last_date.getDate() + 7);
 					last_week = last_date.getWeek();
 				}
@@ -201,14 +211,16 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 				this_week_isolates += +this[2];
 				this_week_genomes += +this[3];
 				this_week_sequences += +this[4];
+				this_week_profiles += +this[5];
 			}
 		}
 	});
-	while (last_week <= current_week ) {
+	while (last_week <= current_week) {
 		date.push(last_week);
 		isolates.push(this_week_isolates);
 		genomes.push(this_week_genomes);
 		sequences.push(this_week_sequences);
+		profiles.push(this_week_profiles);
 		this_week_isolates = 0;
 		this_week_genomes = 0;
 		this_week_sequences = 0;
@@ -220,7 +232,8 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 		date : date,
 		isolates : isolates,
 		genomes : genomes,
-		sequences : sequences
+		sequences : sequences,
+		profiles : profiles
 	};
 }
 
@@ -234,9 +247,11 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
+	var profiles = [];
 	var this_month_genomes = 0;
 	var this_month_isolates = 0;
 	var this_month_sequences = 0;
+	var this_month_profiles = 0;
 	var this_month;
 	$.each(parsed_tsv, function() {
 		if (this[1] != taxon) {
@@ -250,9 +265,11 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 				isolates.push(this_month_isolates);
 				genomes.push(this_month_genomes);
 				sequences.push(this_month_sequences);
+				profiles.push(this_month_profiles);
 				this_month_isolates = 0;
 				this_month_genomes = 0;
 				this_month_sequences = 0;
+				this_month_profiles = 0;
 				last_date.setMonth(last_date.getMonth() + 1);
 				last_month = last_date.getMonthYear();
 				while (this_month > last_month) {
@@ -260,6 +277,7 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 					isolates.push(0);
 					genomes.push(0);
 					sequences.push(0);
+					profiles.push(0);
 					last_date.setMonth(last_date.getMonth() + 1);
 					last_month = last_date.getMonthYear();
 				}
@@ -268,6 +286,7 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 				this_month_isolates += +this[2];
 				this_month_genomes += +this[3];
 				this_month_sequences += +this[4];
+				this_month_profiles += +this[5];
 			}
 		}
 	});
@@ -279,6 +298,7 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 		this_month_isolates = 0;
 		this_month_genomes = 0;
 		this_month_sequences = 0;
+		this_month_profiles = 0;
 		last_date.setMonth(last_date.getMonth() + 1);
 		last_month = last_date.getMonthYear();
 
@@ -288,7 +308,8 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 		date : date,
 		isolates : isolates,
 		genomes : genomes,
-		sequences : sequences
+		sequences : sequences,
+		profiles : profiles
 	};
 }
 
@@ -300,7 +321,7 @@ function get_ranked_sets(parsed_tsv, start_date, number) {
 			return true; // header row
 		}
 		if (this[0] >= start_date) {
-			var row_total = +this[2] + +this[4];
+			var row_total = +this[2] + +this[3] + +this[4] + +this[5];
 			if (typeof taxa[this[1]] == 'undefined') {
 				taxa[this[1]] = 0;
 			}
