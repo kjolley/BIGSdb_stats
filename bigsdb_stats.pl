@@ -104,7 +104,32 @@ sub output_stats {
 		output_recent_links();
 		return;
 	}
+	if ( $opts{'stats'} eq 'totals' ) {
+		output_totals();
+		return;
+	}
 	die "Invalid stats option.\n";
+}
+
+sub output_totals() {
+	my $isolates = run_query('SELECT SUM(count) FROM isolates_date_entered');
+	my $genomes  = run_query('SELECT SUM(count) FROM genomes_date_entered');
+	my $alleles  = run_query('SELECT SUM(count) FROM sequences_date_entered');
+	my $profiles = run_query('SELECT SUM(count) FROM profiles_date_entered');
+	if ( $opts{'format'} eq 'JSON' ) {
+		say encode_json (
+			{
+				isolates => $isolates,
+				genomes  => $genomes,
+				alleles  => $alleles,
+				profiles => $profiles
+			}
+		);
+	} elsif ( $opts{'format'} eq 'TSV' ) {
+		say qq(isolates\tgenomes\talleles\tprofiles);
+		say qq($isolates\t$genomes\t$alleles\t$profiles);
+	}
+	return;
 }
 
 sub output_recent_links {
@@ -571,7 +596,7 @@ ${bold}--setup_access$norm
     Authenticate and delegate access to retrieve an access token.
     
 ${bold}--stats$norm [${under}FUNCTION$norm]
-    Output stats. Available options: date, links
+    Output stats. Available options: date, links, totals
     
 ${bold}--update$norm
 	Update stats database.
