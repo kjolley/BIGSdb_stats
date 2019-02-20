@@ -24,7 +24,7 @@ function read_data_and_create_charts() {
 function create_charts(data) {
 	var period = $('#period').val();
 	var start_date = get_start_date();
-	var list = get_ranked_sets(data, start_date, 5);
+	var list = get_ranked_sets(data, start_date, 8);
 
 	var div = 0;
 	$.each(list, function() {
