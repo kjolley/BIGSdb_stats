@@ -262,20 +262,32 @@ sub output_date_analysis {
 		datestamp    => 'last_modified'
 	);
 	my $type = $options->{'type'} // 'datestamp';
-	$db->do('CREATE TEMP TABLE date_output AS SELECT i.datestamp,r.set_name,i.count AS isolates,'
-		  . "g.count AS genomes FROM set_resources r JOIN isolates_$table{$type} i ON r.dbase_config=i.dbase_config "
-		  . "LEFT JOIN genomes_$table{$type} g ON i.datestamp=g.datestamp AND i.dbase_config=g.dbase_config LEFT JOIN "
-		  . "sequences_$table{$type} s ON r.dbase_config=s.dbase_config" );
+	$db->do('CREATE TEMP TABLE date_output AS SELECT i.datestamp,r.set_name,i.count AS isolates '
+		  . "FROM set_resources r JOIN isolates_$table{$type} i ON r.dbase_config=i.dbase_config " );
+	$db->do('ALTER TABLE date_output ADD genomes int');
 	$db->do('ALTER TABLE date_output ADD sequences int');
 	$db->do('ALTER TABLE date_output ADD profiles int');
 	$db->do('ALTER TABLE date_output ADD PRIMARY KEY(datestamp,set_name)');
+	my $genome_data = run_query(
+		"SELECT g.datestamp,r.set_name,g.count FROM genomes_$table{$type} g "
+		  . 'JOIN set_resources r ON g.dbase_config=r.dbase_config',
+		undef,
+		{ fetch => 'all_arrayref', slice => {} }
+	);
+
+	foreach my $genome_record (@$genome_data) {
+		$db->do(
+			'INSERT INTO date_output (datestamp,set_name,genomes) VALUES (?,?,?) '
+			  . 'ON CONFLICT (datestamp,set_name) DO UPDATE SET genomes=?',
+			undef, @{$genome_record}{qw(datestamp set_name count count)}
+		);
+	}
 	my $seq_data = run_query(
 		"SELECT s.datestamp,r.set_name,s.count FROM sequences_$table{$type} s "
 		  . 'JOIN set_resources r ON s.dbase_config=r.dbase_config',
 		undef,
 		{ fetch => 'all_arrayref', slice => {} }
 	);
-
 	foreach my $seq_record (@$seq_data) {
 		$db->do(
 			'INSERT INTO date_output (datestamp,set_name,sequences) VALUES (?,?,?) '
@@ -596,7 +608,7 @@ ${bold}--setup_access$norm
     Authenticate and delegate access to retrieve an access token.
     
 ${bold}--stats$norm [${under}FUNCTION$norm]
-    Output stats. Available options: date, links, totals
+    Output stats. Available options: datestamp, date_entered, links, totals
     
 ${bold}--update$norm
 	Update stats database.
