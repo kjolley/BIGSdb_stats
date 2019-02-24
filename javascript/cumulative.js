@@ -1,7 +1,12 @@
 $(function() {
 
 	read_data_and_create_chart();
-
+	position_elements();
+	$(window).resize(function (){
+		position_elements();
+		
+	
+	});
 });
 
 function read_data_and_create_chart() {
@@ -26,10 +31,46 @@ function read_data_and_create_chart() {
 				create_chart(parsed.data.slice(0));
 			});
 
+			taxa_selector(parsed.data.slice(0));
+			$("#taxa_list").off("change").change(function(){
+				create_chart(parsed.data.slice(0));
+			});
 			create_chart(parsed.data.slice(0));
 
 		}
 	})
+}
+
+function taxa_selector(data){
+	var taxa = [];
+	var seen = [];
+	$.each(data, function() {
+		if (seen[this[1]] || this[1] == 'set_name'){
+			return true;
+		}
+		taxa.push(this[1]);
+		seen[this[1]]=1;
+	});
+	taxa.sort();
+	$("#taxa_list_div").append("<select id='taxa_list' size='15' multiple='multiple' style='width:200px'></select>");
+	var container = $("#taxa_list");
+	$.each(taxa, function() {
+		   container.append("<option selected='selected'>" + this + "</option>");
+	});
+}
+
+function position_elements(){
+	if ($(window).width()>1000){
+		$("#date_slider").css({width: ($(window).width()-300) + "px"});
+		$("#taxa").css({float:"right"});
+		$("#taxa_list").css({width:"200px"});
+		$("#c3_chart").css({float:"left",width: ($(window).width()-280) + "px"});
+	} else {
+		$("#date_slider").css({width:"90%"});
+		$("#taxa").css({float:"none"});
+		$("#taxa_list").css({width:"auto"});
+		$("#c3_chart").css({float:"none",width:"100%"});		
+	}	
 }
 
 function get_datestamp(date) {
@@ -60,6 +101,11 @@ function get_date_period(data) {
 }
 
 function calc_cumulative(data, range) {
+	var taxa = $("#taxa_list").val();
+	var is_selected=[];
+	$.each(taxa, function() {
+		is_selected[this] = 1;
+	});
 	var date = [];
 	var i_no_genome = 0;
 	var i_with_genome = 0;
@@ -69,7 +115,7 @@ function calc_cumulative(data, range) {
 	var min_date = last_date;
 	var max_date = get_datestamp(range.max);
 	$.each(data, function() {
-		if (this[0] == 'datestamp') {
+		if (this[0] == 'datestamp' || !is_selected[this[1]]) {
 			return true;
 		}
 		var this_date = this[0];
@@ -138,10 +184,8 @@ function downsample(data, max_points) {
 }
 
 function create_chart(data) {
-
 	var range = $('#date_slider').dateRangeSlider("values");
 	var cum_data = calc_cumulative(data, range);
-	console.log(cum_data);
 	var chart = c3.generate({
 		bindto : '#c3_chart',
 		data : {
