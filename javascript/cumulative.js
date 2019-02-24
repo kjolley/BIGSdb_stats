@@ -138,6 +138,7 @@ function calc_cumulative(data, range) {
 		}
 
 	});
+	
 	if (last_date != date[date.length - 1]) {
 		date.push(last_date);
 		isolates_no_genome.push(i_no_genome);
@@ -164,21 +165,17 @@ function downsample(data, max_points) {
 		return data;
 	}
 	var downsample = [];
-	var i = 0;
 	var j = 0;
-	$.each(data, function() {
+	$.each(data, function(i, value) {
 		if (i == 0 || i == (total_points - 1)) {
-			downsample.push(this);
+			downsample.push(value);
 		} else {
-
 			j++;
 			if (j >= gap) {
-				downsample.push(this);
+				downsample.push(value);
 				j = 0;
 			}
-
 		}
-		i++;
 	});
 	return downsample;
 }
@@ -195,8 +192,8 @@ function create_chart(data) {
 					[ 'isolates (no genome)' ]
 							.concat(cum_data.isolates_no_genome),
 					[ 'isolates (with genome)' ]
-							.concat(cum_data.isolates_with_genome), ],
-			type : 'bar',
+							.concat(cum_data.isolates_with_genome) ],
+			type : 'area-step',
 			groups : [ [ 'isolates (no genome)', 'isolates (with genome)' ] ],
 			colors : {
 				'isolates (no genome)' : '#8fb3e3',
@@ -211,12 +208,12 @@ function create_chart(data) {
 		},
 		axis : {
 			x : {
-				type : 'category',
+				type : 'timeseries',
 				tick : {
-					culling : true,
 					rotate : 0,
 					multiline : false,
-					count : 2
+					count : 2,
+					format: '%Y-%m-%d'
 				},
 			}
 		},

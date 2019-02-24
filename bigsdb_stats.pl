@@ -337,7 +337,7 @@ sub update_resources {
 					  . ' ON CONFLICT(dbase_config) DO UPDATE SET description = ?',
 					undef, @{$database}{qw(name description description)}
 				);
-				if ( $database->{'description'} =~ /(.+)\s(?:isolates|specimens|sequence\/profile\ definitions)$/x ) {
+				if ( $database->{'description'} =~ /(.+)\s(?:isolates|samples|sequence\/profile\ definitions)$/x ) {
 					$db->do( 'INSERT INTO sets (name) VALUES (?) ON CONFLICT DO NOTHING', undef, $1 );
 					$db->do( 'INSERT INTO set_resources (set_name,dbase_config) VALUES (?,?) ON CONFLICT DO NOTHING',
 						undef, $1, $database->{'name'} );
