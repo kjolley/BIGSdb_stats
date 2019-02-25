@@ -4,8 +4,26 @@ $(function() {
 	position_elements();
 	$(window).resize(function (){
 		position_elements();
-		
-	
+	});
+	$("#export_image").off("click").click(function(){
+		//fix back fill
+		d3.select("#c3_chart").selectAll("path").attr("fill","none");
+		//fix no axes
+		d3.select("#c3_chart").selectAll("path.domain").attr("stroke","black");
+		//fix no tick
+		d3.select("#c3_chart").selectAll(".tick line").attr("stroke","black");
+		d3.select("#c3_chart").selectAll(".c3-axis-y2").attr("display","none");
+		//Annoying 2nd x-axis
+		//Hide both, then selectively show the first one.
+		d3.select("#c3_chart").selectAll(".c3-axis-x").attr("display","none");
+		d3.select("#c3_chart").select(".c3-axis-x").attr("display","inline");
+		var svg = d3.select("svg")
+			.attr("xmlns","http://www.w3.org/2000/svg")
+			.node().parentNode.innerHTML;
+		svg = svg.replace(/<\/svg>.*$/,"</svg>");
+		var blob = new Blob([svg],{type: "image/svg+xml"});		
+		var filename = "cumulative.svg";
+		saveAs(blob, filename);
 	});
 });
 
@@ -59,19 +77,24 @@ function taxa_selector(data){
 	$.each(taxa, function() {
 		   container.append("<option selected='selected'>" + this + "</option>");
 	});
+	$("#taxa_list").SumoSelect({okCancelInMulti: true, selectAll:true, forceCustomRendering: true});
+	$("#export").show();
 }
 
 function position_elements(){
 	if ($(window).width()>1000){
 		$("#date_slider").css({width: ($(window).width()-300) + "px"});
 		$("#taxa").css({float:"right"});
-		$("#taxa_list").css({width:"200px"});
+		$("#export").css({"float":"right","margin-top":"1em", "margin-right":"0"});
 		$("#c3_chart").css({float:"left",width: ($(window).width()-280) + "px"});
+		$("#mainpanel").css({"min-height":"600px"});
 	} else {
 		$("#date_slider").css({width:"90%"});
-		$("#taxa").css({float:"none"});
-		$("#taxa_list").css({width:"auto"});
-		$("#c3_chart").css({float:"none",width:"100%"});		
+		$("#export").css({float:"left", margin:"2em"});
+		$("#taxa").css({float:"left"});
+		$("#c3_chart").css({float:"none",width:"100%"});	
+		$("#mainpanel").css({"min-height":"950px"});
+		
 	}	
 }
 
@@ -104,6 +127,9 @@ function get_date_period(data) {
 
 function calc_cumulative(data, range) {
 	var taxa = $("#taxa_list").val();
+	if (!taxa){
+		taxa = [];
+	}
 	var is_selected=[];
 	$.each(taxa, function() {
 		is_selected[this] = 1;
