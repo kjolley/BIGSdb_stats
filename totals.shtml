@@ -21,6 +21,7 @@
 <script src="/pubmlst.js" type="text/Javascript"></script>
 <style>
 	#taxa_list option {overflow:hidden;text-overflow:ellipsis}
+	.c3-area {opacity:0.8}
 </style>
 </head>
 

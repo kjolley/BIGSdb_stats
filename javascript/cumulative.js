@@ -48,8 +48,10 @@ function taxa_selector(data){
 		if (seen[this[1]] || this[1] == 'set_name'){
 			return true;
 		}
-		taxa.push(this[1]);
-		seen[this[1]]=1;
+		if (+this[2] > 0 || +this[3] > 0){
+			taxa.push(this[1]);
+			seen[this[1]]=1;
+		}
 	});
 	taxa.sort();
 	$("#taxa_list_div").append("<select id='taxa_list' size='15' multiple='multiple' style='width:200px'></select>");
