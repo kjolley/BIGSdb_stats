@@ -43,7 +43,9 @@
 <div id="date_slider" style="margin:30px;width:80%;"></div>
 
 <div id="c3_chart" style="height:400px"></div>
-<div id="taxa"><p><b>Included datasets</b></p><div id="taxa_list_div" style="margin-right:1em"></div>
+<div id="taxa" style="display:none">
+<p><b>Included datasets</b></p><div id="taxa_list_div" style="margin-right:1em">
+</div>
 </div>
 <div id="export" style="margin-top:1em;display:none"><a id="export_image" title="Export SVG image file" style="cursor:pointer">
 <span class="fa-stack fa-2x export">

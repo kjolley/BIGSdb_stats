@@ -6,15 +6,15 @@ $(function() {
 		position_elements();
 	});
 	$("#export_image").off("click").click(function(){
-		//fix back fill
+		// fix back fill
 		d3.select("#c3_chart").selectAll("path").attr("fill","none");
-		//fix no axes
+		// fix no axes
 		d3.select("#c3_chart").selectAll("path.domain").attr("stroke","black");
-		//fix no tick
+		// fix no tick
 		d3.select("#c3_chart").selectAll(".tick line").attr("stroke","black");
 		d3.select("#c3_chart").selectAll(".c3-axis-y2").attr("display","none");
-		//Annoying 2nd x-axis
-		//Hide both, then selectively show the first one.
+		// Annoying 2nd x-axis
+		// Hide both, then selectively show the first one.
 		d3.select("#c3_chart").selectAll(".c3-axis-x").attr("display","none");
 		d3.select("#c3_chart").select(".c3-axis-x").attr("display","inline");
 		var svg = d3.select("svg")
@@ -27,8 +27,8 @@ $(function() {
 	});
 });
 
-function read_data_and_create_chart() {
-
+function read_data_and_create_chart() {$("#export").css
+	var min_date = $.urlParam('min_date');
 	Papa.parse('/tmp/date_entered.tsv', {
 		download : true,
 		skipEmptyLines : true,
@@ -36,7 +36,7 @@ function read_data_and_create_chart() {
 			var period = get_date_period(parsed.data.slice(0));
 			$('#date_slider').dateRangeSlider({
 				bounds : {
-					min : new Date(period.start),
+					min : min_date ? new Date(min_date) : new Date(period.start),
 					max : new Date()
 				},
 				defaultValues : {
@@ -54,7 +54,6 @@ function read_data_and_create_chart() {
 				create_chart(parsed.data.slice(0));
 			});
 			create_chart(parsed.data.slice(0));
-
 		}
 	})
 }
@@ -71,30 +70,46 @@ function taxa_selector(data){
 			seen[this[1]]=1;
 		}
 	});
+	var set = $.urlParam('set');
 	taxa.sort();
-	$("#taxa_list_div").append("<select id='taxa_list' size='15' multiple='multiple' style='width:200px'></select>");
+
+	
+	$("#taxa_list_div").append(
+		"<select id='taxa_list' size='15' multiple='multiple' style='width:200px'></select>"
+	);
 	var container = $("#taxa_list");
 	$.each(taxa, function() {
-		   container.append("<option selected='selected'>" + this + "</option>");
+		var selection = (set && this != set) ? '' :  " selected='selected'";
+	   container.append("<option" + selection + ">" + this + "</option>");
 	});
 	$("#taxa_list").SumoSelect({okCancelInMulti: true, selectAll:true, forceCustomRendering: true});
+	if (!set){
+		$("#taxa").css({"display":"block"});
+	}
 	$("#export").show();
 }
 
 function position_elements(){
+	var set = $.urlParam('set');
 	if ($(window).width()>1000){
-		$("#date_slider").css({width: ($(window).width()-300) + "px"});
-		$("#taxa").css({float:"right"});
-		$("#export").css({"float":"right","margin-top":"1em", "margin-right":"0"});
-		$("#c3_chart").css({float:"left",width: ($(window).width()-280) + "px"});
+		if (set){
+			$("#date_slider").css({width: ($(window).width()-120) + "px"});
+			$("#c3_chart").css({float:"left",width: ($(window).width()-50) + "px"});
+			$("#export").css({"float":"left"});
+		} else {
+			$("#date_slider").css({width: ($(window).width()-300) + "px"});
+			$("#c3_chart").css({float:"left",width: ($(window).width()-280) + "px"});
+			$("#export").css({"float":"right","margin-top":"1em", "margin-right":"0"});
+		}
 		$("#mainpanel").css({"min-height":"600px"});
 	} else {
-		$("#date_slider").css({width:"90%"});
-		$("#export").css({float:"left", margin:"2em"});
+		$("#date_slider").css({width:"85%"});
 		$("#taxa").css({float:"left"});
 		$("#c3_chart").css({float:"none",width:"100%"});	
-		$("#mainpanel").css({"min-height":"950px"});
-		
+		if (!set){
+			$("#export").css({float:"left", margin:"2em"});
+			$("#mainpanel").css({"min-height":"950px"});
+		}
 	}	
 }
 
@@ -209,10 +224,18 @@ function downsample(data, max_points) {
 }
 
 function create_chart(data) {
+	var title;
+	var taxa = $("#taxa_list").val();
+	if (taxa && taxa.length == 1){
+		title = taxa[0];
+	}
 	var range = $('#date_slider').dateRangeSlider("values");
 	var cum_data = calc_cumulative(data, range);
 	var chart = c3.generate({
 		bindto : '#c3_chart',
+		title: {
+			text: title
+		},
 		data : {
 			x : 'date',
 			columns : [
@@ -259,4 +282,12 @@ function create_chart(data) {
 			}
 		},
 	});
+}
+
+$.urlParam = function(name){
+    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+    if (results==null) {
+       return null;
+    }
+    return decodeURI(results[1]) || 0;
 }
