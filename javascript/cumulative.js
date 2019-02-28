@@ -82,7 +82,12 @@ function taxa_selector(data){
 		var selection = (set && this != set) ? '' :  " selected='selected'";
 	   container.append("<option" + selection + ">" + this + "</option>");
 	});
-	$("#taxa_list").SumoSelect({okCancelInMulti: true, selectAll:true, forceCustomRendering: true});
+	$("#taxa_list").SumoSelect({
+		okCancelInMulti: true, 
+		selectAll:true, 
+		forceCustomRendering: true,
+		captionFormatAllSelected:'{0} - All selected'
+	});
 	if (!set){
 		$("#taxa").css({"display":"block"});
 	}
