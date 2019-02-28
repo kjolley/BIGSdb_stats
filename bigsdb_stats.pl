@@ -84,6 +84,7 @@ sub main {
 		update_isolates();
 		update_sequences();
 		update_profiles();
+		update_countries();
 	}
 	if ( $opts{'stats'} ) {
 		output_stats();
@@ -387,11 +388,10 @@ sub update_totals {
 }
 
 sub update_isolates {
-	my ($options) = @_;
 	my $ignore_config_list = get_ignore_config_list();
-	my %ignore = map { $_ => 1 } @$ignore_config_list;
-	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
-	my %table = (
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my $resources          = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
+	my %table              = (
 		date_entered => 'date_entered',
 		datestamp    => 'last_modified'
 	);
@@ -429,11 +429,10 @@ sub update_isolates {
 }
 
 sub update_profiles {
-	my ($options) = @_;
 	my $ignore_config_list = get_ignore_config_list();
-	my %ignore = map { $_ => 1 } @$ignore_config_list;
-	my $resources = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
-	my %table = (
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my $resources          = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
+	my %table              = (
 		date_entered => 'date_entered',
 		datestamp    => 'last_modified'
 	);
@@ -470,11 +469,42 @@ sub update_profiles {
 	return;
 }
 
-sub update_sequences {
-	my ($options) = @_;
+sub update_countries {
 	my $ignore_config_list = get_ignore_config_list();
-	my %ignore = map { $_ => 1 } @$ignore_config_list;
-	my %table = (
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my $resources          = run_query( 'SELECT dbase_config FROM set_resources', undef, { fetch => 'col_arrayref' } );
+	eval {
+		CONFIG: foreach my $config (@$resources)
+		{
+			next CONFIG if $ignore{$config};
+			my $data = $client->get_record("$opts{'url'}/db/$config");
+			next CONFIG if !$data->{'fields'};
+			my $fields = $client->get_record( $data->{'fields'} );
+		  FIELD: foreach my $field (@$fields) {
+				next if $field->{'name'} ne 'country';
+				next if !$field->{'allowed_values'};
+				next if !$field->{'breakdown'};
+				my $breakdown = $client->get_record( $field->{'breakdown'} );
+				$db->do( 'DELETE FROM countries WHERE dbase_config=?', undef, $config );
+				foreach my $country ( keys %$breakdown ) {
+					$db->do( 'INSERT INTO countries (dbase_config,country,count) VALUES (?,?,?)',
+						undef, $config, $country, $breakdown->{$country} );
+				}
+			}
+		}
+	};
+	if ($@) {
+		$db->rollback;
+		die "$@\n";
+	}
+	$db->commit;
+	return;
+}
+
+sub update_sequences {
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my %table              = (
 		date_entered => 'date_entered',
 		datestamp    => 'last_modified'
 	);

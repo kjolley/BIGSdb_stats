@@ -109,6 +109,16 @@ CREATE TABLE profiles_last_modified (
 	ON UPDATE CASCADE
 );
 
+CREATE TABLE countries (
+	dbase_config text NOT NULL,
+	country text NOT NULL,
+	count int NOT NULL,
+	PRIMARY KEY (dbase_config,country),
+	CONSTRAINT c_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+);
+
 GRANT SELECT,UPDATE,INSERT,DELETE ON resources,sets,set_resources,isolates_date_entered,
 isolates_last_modified,genomes_date_entered,genomes_last_modified,sequences_date_entered,
-sequences_last_modified,profiles_date_entered,profiles_last_modified TO apache;
+sequences_last_modified,profiles_date_entered,profiles_last_modified,countries TO apache;
