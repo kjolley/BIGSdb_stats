@@ -73,21 +73,15 @@ function taxa_selector(data){
 	var set = $.urlParam('set');
 	taxa.sort();
 
-	
-	$("#taxa_list_div").append(
-		"<select id='taxa_list' size='15' multiple='multiple' style='width:200px'></select>"
-	);
 	var container = $("#taxa_list");
 	$.each(taxa, function() {
 		var selection = (set && this != set) ? '' :  " selected='selected'";
 	   container.append("<option" + selection + ">" + this + "</option>");
 	});
-	$("#taxa_list").SumoSelect({
-		okCancelInMulti: true, 
-		selectAll:true, 
-		forceCustomRendering: true,
-		captionFormatAllSelected:'{0} - All selected'
-	});
+	
+
+	$("#taxa_list").multiselect().multiselectfilter();
+	$(".ui-multiselect-menu.ui-widget.ui-widget-content").css({"display":"none"});
 	if (!set){
 		$("#taxa").css({"display":"block"});
 	}
@@ -95,27 +89,9 @@ function taxa_selector(data){
 }
 
 function position_elements(){
-	var set = $.urlParam('set');
-	if ($(window).width()>1000){
-		if (set){
-			$("#date_slider").css({width: ($(window).width()-120) + "px"});
-			$("#c3_chart").css({float:"left",width: ($(window).width()-50) + "px"});
-			$("#export").css({"float":"left"});
-		} else {
-			$("#date_slider").css({width: ($(window).width()-300) + "px"});
-			$("#c3_chart").css({float:"left",width: ($(window).width()-280) + "px"});
-			$("#export").css({"float":"right","margin-top":"1em", "margin-right":"0"});
-		}
-		$("#mainpanel").css({"min-height":"600px"});
-	} else {
-		$("#date_slider").css({width:"85%"});
-		$("#taxa").css({float:"left"});
-		$("#c3_chart").css({float:"none",width:"100%"});	
-		if (!set){
-			$("#export").css({float:"left", margin:"2em"});
-			$("#mainpanel").css({"min-height":"950px"});
-		}
-	}	
+	$("#date_slider").css({width:$(window).width()-120 + "px"});
+	$("#c3_chart").css({width:"95%"});
+
 }
 
 function get_datestamp(date) {

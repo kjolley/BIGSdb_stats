@@ -6,22 +6,30 @@
 <meta name="viewport" content="width=device-width" />
 <title>Database submissions over time</title>
 <style type="text/css" media="screen">@import "/style.css";</style>
-<style type="text/css" media="screen">@import "/css/jquery-ui.css";</style>
+<style type="text/css">@import "https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css";</style>
 <style type="text/css" media="print">@import "/print.css";</style>
-<style type="text/css" media="screen">@import "/css/c3.css";</style>
-<style type="text/css" media="screen">@import "/css/iThing-min.css";</style>
-<style type="text/css" media="screen">@import "/css/fontawesome-all.css";</style>
-<style type="text/css" media="screen">@import "/css/sumoselect.min.css";</style>
+<style type="text/css">@import "/css/c3.css";</style>
+<style type="text/css">@import "/css/iThing-min.css";</style>
+<style type="text/css">@import "/css/jquery.multiselect.css";</style>
+<style type="text/css">@import "/css/jquery.multiselect.filter.css";</style>
+<style type="text/css">@import "/css/fontawesome-all.css";</style>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-<script src="https://code.jquery.com/ui/1.10.3/jquery-ui.js" type="text/Javascript"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/ui/1.10.3/jquery-ui.js" type="text/Javascript"></script> -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" 
+integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" 
+crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
+crossorigin="anonymous"></script>
 <script src="/javascript/jQDateRangeSlider-min.js"></script>
 <script src="/javascript/d3.v5.min.js"></script>
 <script src="/javascript/c3.min.js"></script>
 <script src="/javascript/papaparse.min.js"></script>
 <script src="/javascript/cumulative.js"></script>
 <script src="/javascript/FileSaver.min.js"></script>
-<script src="/javascript/jquery.sumoselect.min.js"></script>
+<script src="/javascript/jquery.multiselect.min.js"></script>
+<script src="/javascript/jquery.multiselect.filter.min.js"></script>
 <script src="/pubmlst.js" type="text/Javascript"></script>
 <style>
 	.c3-area {opacity:0.8}
@@ -44,15 +52,17 @@
 
 <div id="c3_chart" style="height:400px"></div>
 <div id="taxa" style="display:none">
-<p><b>Included datasets</b></p><div id="taxa_list_div" style="margin-right:1em">
+<fieldset style="float:left"><legend>Included datasets</legend>
+<select id='taxa_list' multiple='multiple'></select>
+</fieldset>
 </div>
-</div>
-<div id="export" style="margin-top:1em;display:none"><a id="export_image" title="Export SVG image file" style="cursor:pointer">
+<div id="export" style="margin-top:1em;display:none;float:right">
+<a id="export_image" title="Export SVG image file" style="cursor:pointer">
 <span class="fa-stack fa-2x export">
 <span class="fas fa-square fa-stack-2x export_image"></span>
 <span class="fas fa-file-image fa-stack-1x fa-inverse"></span>
 </span></a></div>
 
-</div></div>
+</div>
 </body>
 </html>
