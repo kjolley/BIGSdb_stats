@@ -109,6 +109,10 @@ sub output_stats {
 		output_totals();
 		return;
 	}
+	if ( $opts{'stats'} eq 'countries' ) {
+		output_countries();
+		return;
+	}
 	die "Invalid stats option.\n";
 }
 
@@ -146,6 +150,24 @@ sub output_recent_links {
 			say q(</ul></li>);
 		}
 		say q(</ul>);
+	}
+	return;
+}
+
+sub output_countries {
+	my $data = run_query(
+		'SELECT r.set_name,c.country,c.count FROM countries c JOIN set_resources r ON '
+		  . 'c.dbase_config=r.dbase_config ORDER BY c.country,r.set_name',
+		undef,
+		{ fetch => 'all_arrayref', slice => {} }
+	);
+	if ( $opts{'format'} eq 'JSON' ) {
+		say encode_json($data);
+		return;
+	}
+	say qq(set_name\tcountry\tcount);
+	foreach my $record (@$data){
+		say qq($record->{'set_name'}\t$record->{'country'}\t$record->{'count'});
 	}
 	return;
 }
@@ -638,7 +660,7 @@ ${bold}--setup_access$norm
     Authenticate and delegate access to retrieve an access token.
     
 ${bold}--stats$norm [${under}FUNCTION$norm]
-    Output stats. Available options: datestamp, date_entered, links, totals
+    Output stats. Available options: countries, datestamp, date_entered, links, totals
     
 ${bold}--update$norm
 	Update stats database.
