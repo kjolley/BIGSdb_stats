@@ -37,6 +37,10 @@ crossorigin="anonymous"></script>
 		color:#47f;
 		text-shadow: 3px 3px 3px #999
 	}
+	span.export_text {
+		color:#666;
+		text-shadow: 3px 3px 3px #999
+	}	
 </style>
 </head>
 
@@ -57,6 +61,11 @@ crossorigin="anonymous"></script>
 </fieldset>
 </div>
 <div id="export" style="margin-top:1em;display:none;float:right">
+<a id="export_text" title="Export TSV file" style="cursor:pointer">
+<span class="fa-stack fa-2x export">
+  <span class="fas fa-square fa-stack-2x export_text"></span>
+  <span class="fas fa-file-alt fa-stack-1x fa-inverse"></span>
+</span></a>
 <a id="export_image" title="Export SVG image file" style="cursor:pointer">
 <span class="fa-stack fa-2x export">
 <span class="fas fa-square fa-stack-2x export_image"></span>

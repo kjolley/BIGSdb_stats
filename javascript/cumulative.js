@@ -1,4 +1,5 @@
 var max_datapoints = 500;
+var export_text = '';
 $(function() {
 
 	read_data_and_create_chart();
@@ -36,6 +37,14 @@ $(function() {
 						var filename = "cumulative.svg";
 						saveAs(blob, filename);
 					});
+	$("#export_text").off("click").click(function() {
+
+		var blob = new Blob([ export_text ], {
+			type : "text/plain;charset=utf-8"
+		})
+		var filename = "cumulative.tsv";
+		saveAs(blob, filename);
+	});
 });
 
 function read_data_and_create_chart() {
@@ -143,6 +152,7 @@ function get_date_period(data) {
 }
 
 function calc_cumulative(data, range) {
+	export_text = "datestamp\tisolates\tisolates_no_genome\tisolates_with_genome\talleles\n";
 	var taxa = $("#taxa_list").val();
 	if (!taxa) {
 		taxa = [];
@@ -181,6 +191,9 @@ function calc_cumulative(data, range) {
 			isolates_with_genome.push(running_with_genome);
 			isolates.push(running_isolates)
 			alleles.push(running_alleles);
+			export_text += last_date + "\t" + running_isolates + "\t"
+					+ running_no_genome + "\t" + running_with_genome + "\t"
+					+ running_alleles + "\n";
 			last_date = this_date;
 		}
 		if (this_date <= max_date) {
@@ -200,6 +213,9 @@ function calc_cumulative(data, range) {
 		isolates_with_genome.push(running_with_genome);
 		isolates.push(running_isolates);
 		alleles.push(running_alleles);
+		export_text += last_date + "\t" + running_isolates + "\t"
+		+ running_no_genome + "\t" + running_with_genome + "\t"
+		+ running_alleles + "\n";
 	}
 
 	return {
@@ -256,20 +272,20 @@ function create_chart(data) {
 	if (!show_alleles) {
 		hide.push('alleles');
 	}
-	var columns = [[ 'date' ].concat(cum_data.dates)];
-	if (!hide.includes('isolates (no genome)')){
+	var columns = [ [ 'date' ].concat(cum_data.dates) ];
+	if (!hide.includes('isolates (no genome)')) {
 		columns.push([ 'isolates (no genome)' ]
-							.concat(cum_data.isolates_no_genome));
-	}	
-	if (!hide.includes('isolates (with genome)')){
-		columns.push([ 'isolates (with genome)' ]
-							.concat(cum_data.isolates_with_genome))
+				.concat(cum_data.isolates_no_genome));
 	}
-	if (!hide.includes('isolates')){
+	if (!hide.includes('isolates (with genome)')) {
+		columns.push([ 'isolates (with genome)' ]
+				.concat(cum_data.isolates_with_genome))
+	}
+	if (!hide.includes('isolates')) {
 		columns.push([ 'isolates' ].concat(cum_data.isolates))
 	}
-	if (!hide.includes('alleles')){
-		columns.push([ 'alleles' ].concat(cum_data.alleles) )
+	if (!hide.includes('alleles')) {
+		columns.push([ 'alleles' ].concat(cum_data.alleles))
 	}
 	var chart = c3.generate({
 		bindto : '#c3_chart',
