@@ -1,38 +1,47 @@
 $(function() {
-	Papa.parse('/tmp/date_entered.tsv', {
-		download : true,
-		skipEmptyLines : true,
-		complete : function(parsed) {
-			var summary = summarise(parsed.data.slice(0));
-			console.log(summary);
-			$("dd#isolates").html(commify(summary.isolates));
-			$("dd#genomes").html(commify(summary.genomes));
-			$("dd#alleles").html(commify(summary.alleles));
+	$.ajax({
+		url : '/tmp/date_entered.tsv',
+		success : function(data) {
+			var summary = overviewApp.summarise(data);
+			$("dd#isolates").html(overviewApp.commify(summary.isolates));
+			$("dd#genomes").html(overviewApp.commify(summary.genomes));
+			$("dd#alleles").html(overviewApp.commify(summary.alleles));
+			$("dd#profiles").html(overviewApp.commify(summary.profiles));
 			$("dl#overview_stats").show();
 		}
 	})
 });
 
-function summarise(data){
+var overviewApp = {};
+
+overviewApp.summarise = function(data) {
 	var set = $("#set").val();
 	var isolates = 0;
 	var genomes = 0;
 	var alleles = 0;
-	$.each(data, function() {
-		if (this[0] == 'datestamp' || (set && this[1] != set)) {
+	var profiles = 0;
+	var lines = data.split(/\n/);
+	$.each(lines, function() {
+		if (this == ''){
 			return true;
 		}
-		isolates += +this[2];
-		genomes += +this[3];
-		alleles += +this[4];
+		var cols = this.split(/\t/);
+		if (cols[0] == 'datestamp' || (set && cols[1] != set)) {
+			return true;
+		}
+		isolates += +cols[2];
+		genomes += +cols[3];
+		alleles += +cols[4];
+		profiles += +cols[5];
 	});
 	return {
-		isolates: isolates,
-		genomes: genomes,
-		alleles: alleles
+		isolates : isolates,
+		genomes : genomes,
+		alleles : alleles,
+		profiles : profiles
 	};
 }
 
-function commify(x) {
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+overviewApp.commify = function(x) {
+	return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
