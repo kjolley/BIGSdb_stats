@@ -29,15 +29,17 @@ cumulativeApp.commify = function(x) {
 }
 
 cumulativeApp.read_data_and_create_chart = function() {
-	Papa.parse('/tmp/date_entered.tsv', {
-		download : true,
-		skipEmptyLines : true,
-		complete : function(parsed) {
-			var cum_data = cumulativeApp.calc_cumulative(parsed.data.slice(0));
-			cumulativeApp.create_chart(cum_data);
-
-		}
-	})
+	var url = $("#json").val();
+	if (typeof url == 'undefined'){
+		url = '/tmp/date_entered.tsv';
+	}
+	d3.tsv(url, function(d) {
+		return d
+	}, function(error, rows) {
+		var cum_data = cumulativeApp.calc_cumulative(rows);
+		cumulativeApp.create_chart(cum_data);
+		
+	});
 }
 
 cumulativeApp.get_datestamp = function(date_string) {
@@ -56,11 +58,11 @@ cumulativeApp.get_date_period = function(data) {
 	} else {
 		min = today_datestamp;
 		$.each(data, function() {
-			if (this[0] == 'datestamp') {
+			if (this.datestamp == 'datestamp') {
 				return true;
 			}
-			if (this[0] < min) {
-				min = this[0];
+			if (this.datestamp < min) {
+				min = this.datestamp;
 			}
 		});
 	}
@@ -177,19 +179,20 @@ cumulativeApp.calc_cumulative = function(data) {
 	var min_date = last_date;
 	var max_date = cumulativeApp.get_datestamp(range.max);
 	var set = $("#set").val();
+//	console.log(data);
 	$.each(data, function() {
-		if (this[0] == 'datestamp') {
+//		if (this[0] == 'datestamp') {
+//			return true;
+//		}
+		if (set && this.set_name != set) {
 			return true;
 		}
-		if (set && this[1] != set) {
-			return true;
-		}
-		var this_date = this[0];
+		var this_date = this.datestamp;
 		if (this_date < min_date) {
-			running_no_genome += +this[2] - +this[3];
-			running_with_genome += +this[3];
-			running_isolates += +this[2];
-			running_alleles += +this[4]
+			running_no_genome += +this.isolates - +this.genomes;
+			running_with_genome += +this.genomes;
+			running_isolates += +this.isolates;
+			running_alleles += +this.sequences
 			return true;
 		}
 		if (this_date != last_date) {
@@ -200,10 +203,10 @@ cumulativeApp.calc_cumulative = function(data) {
 			last_date = this_date;
 		}
 		if (this_date <= max_date) {
-			running_no_genome += +this[2] - +this[3];
-			running_with_genome += +this[3];
-			running_isolates += +this[2];
-			running_alleles += +this[4]
+			running_no_genome += +this.isolates - +this.genomes;
+			running_with_genome += +this.genomes;
+			running_isolates += +this.isolates;
+			running_alleles += +this.sequences
 		} else {
 			return false;
 		}
@@ -217,7 +220,6 @@ cumulativeApp.calc_cumulative = function(data) {
 		isolates.push(running_isolates);
 		alleles.push(running_alleles);
 	}
-
 	return {
 		dates : cumulativeApp.downsample(date, max_datapoints),
 		isolates_no_genome : cumulativeApp.downsample(isolates_no_genome,
