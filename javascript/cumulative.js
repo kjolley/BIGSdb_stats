@@ -169,7 +169,7 @@ function calc_cumulative(data, range) {
 	var isolates = [];
 	var isolates_no_genome = [];
 	var isolates_with_genome = [];
-	var alleles = []
+	var alleles = [];
 	var last_date = get_datestamp(range.min);
 	var min_date = last_date;
 	var max_date = get_datestamp(range.max);

@@ -22,7 +22,7 @@ overviewApp.summarise = function(data) {
 	var profiles = 0;
 	var lines = data.split(/\n/);
 	$.each(lines, function() {
-		if (this == ''){
+		if (this == '') {
 			return true;
 		}
 		var cols = this.split(/\t/);
