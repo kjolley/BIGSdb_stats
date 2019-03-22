@@ -44,7 +44,7 @@ embedMap.position_elements = function() {
 }
 
 embedMap.read_data_and_create_chart = function() {
-	var url = $("#json").val();
+	var url = $("#url").val();
 	if (typeof url == 'undefined'){
 		url = '/tmp/countries.tsv';
 	}

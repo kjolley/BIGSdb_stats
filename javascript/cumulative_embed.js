@@ -29,7 +29,7 @@ cumulativeApp.commify = function(x) {
 }
 
 cumulativeApp.read_data_and_create_chart = function() {
-	var url = $("#json").val();
+	var url = $("#url").val();
 	if (typeof url == 'undefined'){
 		url = '/tmp/date_entered.tsv';
 	}
