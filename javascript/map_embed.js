@@ -104,7 +104,7 @@ embedMap.finishedDrawing = function() {
 	var labels = [];
 	$.each(summary_data, function() {
 		var plural = this.isolates == 1 ? '' : 's';
-		labels[this.iso3] = this.country + "\n" + this.isolates + " isolate"
+		labels[this.iso3] = this.country + "\n" + embedMap.commify(this.isolates) + " isolate"
 				+ plural + "\n" + this.label;
 	});
 
@@ -164,7 +164,7 @@ embedMap.summarise = function(data) {
 				label += "\n" + "...";
 			} else {
 				var plural = sorted[i].isolates == 1 ? '' : 's';
-				label += "\n" + sorted[i].set + ": " + sorted[i].isolates
+				label += "\n" + sorted[i].set + ": " + embedMap.commify(sorted[i].isolates)
 						+ " isolate" + plural;
 			}
 		}
@@ -186,4 +186,8 @@ embedMap.summarise = function(data) {
 embedMap.sort_by_value = function(a, b) {
 	return ((+a.isolates < +b.isolates) ? 1 : ((+a.isolates > +b.isolates) ? -1
 			: 0));
+}
+
+embedMap.commify = function(x) {
+	return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
