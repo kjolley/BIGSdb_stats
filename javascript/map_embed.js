@@ -82,7 +82,8 @@ embedMap.get_colours = function() {
 		purple : colorbrewer.Purples[5],
 		orange : colorbrewer.Oranges[5],
 		green : colorbrewer.Greens[5],
-		red_purple: colorbrewer.RdPu[5]
+		red_purple: colorbrewer.RdPu[5],
+		yellow_orange_brown: colorbrewer.YlOrBr[5]
 	};
 	if (typeof colours == 'undefined') {
 		return colorbrewer.Blues[5];
