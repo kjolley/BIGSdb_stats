@@ -4,7 +4,7 @@ var alleles;
 var map;
 var summary_data;
 var max_label = 10;
-var window_width = $(window).width();
+var window_width = $("div#map").width();
 
 var embedMap = {};
 
@@ -13,7 +13,7 @@ $(function() {
 	$("#text_totals").show();
 	$(window).resize(function() {
 		delay(function() {
-			var new_width = $(window).width();
+			var new_width = $("div#map").width();
 			// Stop firing on scroll in Android
 			if (new_width != window_width) {
 				embedMap.draw_map();
