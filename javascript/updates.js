@@ -222,7 +222,6 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 		}
 	});
 	while (last_week <= current_week) {
-		console.log(taxon + last_week);
 		date.push(last_week);
 		isolates.push(this_week_isolates);
 		genomes.push(this_week_genomes);
