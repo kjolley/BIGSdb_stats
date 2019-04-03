@@ -43,7 +43,9 @@
 <div id="c3_chart3" style="width:95%;height:200px"></div>
 <div id="c3_chart4" style="width:95%;height:200px"></div>
 <div id="c3_chart5" style="width:95%;height:200px"></div>
-
+<div id="c3_chart6" style="width:95%;height:200px"></div>
+<div id="c3_chart7" style="width:95%;height:200px"></div>
+<div id="c3_chart8" style="width:95%;height:200px"></div>
 <div class="panel" id="infopanel">
 <h2>Latest updates</h2>
 <!--#include virtual="/recent.html" -->

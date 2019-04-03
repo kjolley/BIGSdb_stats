@@ -78,7 +78,7 @@ function load_chart_top_hit(taxon, div, data) {
 				profiles : '#a4a',
 				alleles : '#44a'
 			},
-			order: null
+			order : null
 		},
 		axis : {
 			x : {
@@ -111,6 +111,7 @@ function load_chart_top_hit(taxon, div, data) {
 function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 	var date = [];
 	var last_date = new Date(start_date);
+	last_date.setHours(0, 0, 0, 0);
 	var current_date = new Date();
 	current_date.setHours(0, 0, 0, 0);
 	var isolates = [];
@@ -124,6 +125,7 @@ function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 		}
 		if (this[0] >= start_date) {
 			var this_date = new Date(this[0]);
+			this_date.setHours(0, 0, 0, 0);
 			while (last_date < this_date) {
 				date.push(last_date.getFullYear() + "-"
 						+ ("0" + (last_date.getMonth() + 1)).slice(-2) + "-"
@@ -140,6 +142,7 @@ function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 			sequences.push(+this[4]);
 			profiles.push(+this[5]);
 			last_date = new Date(this[0]);
+			last_date.setHours(0, 0, 0, 0);
 			last_date.setDate(last_date.getDate() + 1);
 		}
 	});
@@ -165,10 +168,12 @@ function get_daily_taxa_data(parsed_tsv, taxon, start_date) {
 function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 	var date = [];
 	var last_date = new Date(start_date);
+	last_date.setHours(0, 0, 0, 0);
 	var last_week = last_date.getWeek();
 	var current_date = new Date();
-	var current_week = current_date.getWeek();
 	current_date.setHours(0, 0, 0, 0);
+	var current_week = current_date.getWeek();
+	
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
@@ -184,6 +189,7 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 		}
 		if (this[0] >= start_date) {
 			var this_date = new Date(this[0]);
+			this_date.setHours(0, 0, 0, 0);
 			this_week = this_date.getWeek();
 			if (this_week > last_week) {
 				date.push(last_week);
@@ -216,6 +222,7 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 		}
 	});
 	while (last_week <= current_week) {
+		console.log(taxon + last_week);
 		date.push(last_week);
 		isolates.push(this_week_isolates);
 		genomes.push(this_week_genomes);
@@ -223,9 +230,9 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 		profiles.push(this_week_profiles);
 		this_week_isolates = 0;
 		this_week_genomes = 0;
-		this_week_sequences = 0;
-		last_week = last_date.getWeek();
+		this_week_sequences = 0;		
 		last_date.setDate(last_date.getDate() + 7);
+		last_week = last_date.getWeek();
 	}
 
 	return {
@@ -240,10 +247,12 @@ function get_weekly_taxa_data(parsed_tsv, taxon, start_date) {
 function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 	var date = [];
 	var last_date = new Date(start_date);
+	last_date.setHours(0, 0, 0, 0);
 	var last_month = last_date.getMonthYear();
 	var current_date = new Date();
-	var current_month = current_date.getMonthYear();
 	current_date.setHours(0, 0, 0, 0);
+	var current_month = current_date.getMonthYear();
+	
 	var isolates = [];
 	var genomes = [];
 	var sequences = [];
@@ -259,6 +268,7 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 		}
 		if (this[0] >= start_date) {
 			var this_date = new Date(this[0]);
+			this_date.setHours(0, 0, 0, 0);
 			this_month = this_date.getMonthYear();
 			if (this_month > last_month) {
 				date.push(last_month);
@@ -301,7 +311,6 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 		this_month_profiles = 0;
 		last_date.setMonth(last_date.getMonth() + 1);
 		last_month = last_date.getMonthYear();
-
 	}
 
 	return {
@@ -361,6 +370,7 @@ Date.prototype.getWeek = function() {
 	date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
 	// January 4 is always in week 1.
 	var week1 = new Date(date.getFullYear(), 0, 4);
+	week1.setHours(0, 0, 0, 0);
 	// Adjust to Thursday in week 1 and count number of weeks from date to
 	// week1.
 	return date.getWeekYear()
@@ -373,11 +383,13 @@ Date.prototype.getWeek = function() {
 // Returns the four-digit year corresponding to the ISO week of the date.
 Date.prototype.getWeekYear = function() {
 	var date = new Date(this.getTime());
+	date.setHours(0, 0, 0, 0);
 	date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
 	return date.getFullYear();
 }
 
 Date.prototype.getMonthYear = function() {
 	var date = new Date(this.getTime());
+	date.setHours(0, 0, 0, 0);
 	return date.getFullYear() + "-" + ("0" + (date.getMonth() + 1)).slice(-2);
 }
