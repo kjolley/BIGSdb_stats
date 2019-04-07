@@ -2,125 +2,167 @@
 
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<meta name="Description" content="Multilocus sequence typing (MLST) databases and software" />
+<meta name="Description"
+	content="Multilocus sequence typing (MLST) databases and software" />
 <meta name="viewport" content="width=device-width" />
 <title>Public databases for molecular typing - PubMLST.org</title>
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:site" content="@keithajolley" />
 <meta name="twitter:title" content="PubMLST" />
-<meta name="twitter:description" content="Public databases for molecular typing and microbial genome diversity" />
-<meta name="twitter:image" content="http://pubmlst.org/images/BIGSdb_gc.png" />
-<style media="screen">@import "/style.css?v=20130522";</style>
-<style media="print">@import "/print.css";</style>
-<style media="screen">@import "/css/c3.css";</style>
-<style media="screen">@import "/d3-geomap/css/d3.geomap.css";</style>
+<meta name="twitter:description"
+	content="Public databases for molecular typing and microbial genome diversity" />
+<meta name="twitter:image"
+	content="http://pubmlst.org/images/BIGSdb_gc.png" />
+<style media="all">
+@import "/style.css?v=20130522";
+</style>
+<style media="print">
+@import "/print.css";
+</style>
+<style media="all">
+@import "/css/d3.geomap.css";
+</style>
 <script src="/javascript/jquery.min.js"></script>
-<script src="/javascript/overview_stats.js" async></script>
-<script src="/pubmlst.js" async></script>
 <script src="/javascript/d3.v5.min.js"></script>
-<script src="/d3-geomap/vendor/d3.geomap.dependencies.min.js" async></script>
-<script src="/d3-geomap/js/d3.geomap.min.js" async></script>
+<script src="/javascript/overview_stats.js?v=1" async></script>
+<script src="/pubmlst.js" async></script>
+<script src="/javascript/d3-geo-projection.min.js" async></script>
+<script src="/javascript/topojson.min.js" async></script>
+<script src="/javascript/d3.geomap.min.js" async></script>
 <script src="/javascript/map_embed.js" async></script>
-
 <style>
- 
-  div#map_container {max-width:800px;width:98%}
-  div#map .datum {margin-top:100px}
-  h2#map_title {max-width:800px;width:98%;text-align:center}
-  div#map_link {text-align:center;font-size:0.8em;display:none}
+div#map_container {
+	max-width: 800px;
+	width: 98%
+}
 
-  h1 {
-  font-size:4em;
-  border:0;
-  background:transparent;
-  line-height:0.1;
-  text-shadow: 4px 4px #dfdfdf;
-  text-align:center
-  }
+div#map .datum {
+	margin-top: 100px
+}
 
-  @media (max-width:768px){
-  h1 {
-  font-size:3em;
-  text-shadow: 3px 3px #dfdfdf;
-  }
-  }
-  @media (max-width:600px){
-  h1 {font-size:2em;text-shadow: 2px 2px #dfdfdf;}
-  }
+h2#map_title {
+	max-width: 800px;
+	width: 98%;
+	text-align: center
+}
 
+div#map_link {
+	text-align: center;
+	font-size: 0.8em;
+	display: none
+}
+
+h1 {
+	font-size: 4em;
+	border: 0;
+	background: transparent;
+	line-height: 0.1;
+	text-shadow: 4px 4px #dfdfdf;
+	text-align: center
+}
+
+@media ( min-width :1300px) {
+	div#map_container {
+		float: left
+	}
+	dl#overview_stats {
+		font-size: 1.2em;
+		margin-top: 5em;
+		margin-left: -5em
+	}
+}
+
+@media ( max-width :768px) {
+	h1 {
+		font-size: 3em;
+		text-shadow: 3px 3px #dfdfdf;
+	}
+}
+
+@media ( max-width :600px) {
+	h1 {
+		font-size: 2em;
+		text-shadow: 2px 2px #dfdfdf;
+	}
+}
 </style>
 </head>
 
 <body>
-<!--#include virtual="topbar.html" -->
-<div class="expand_content">
-  <div class="panel" id="mainpanel">
-    <div id="main_container">
-      <h1>PubMLST</h1>
-<!--<div id="logo" style="text-align:center; margin:1em 0">
-<img src="/images/pubmlst.gif" alt="MLST databases and software - PubMLST.org" />
-</div>-->
-<p>Welcome to PubMLST - Public databases for molecular typing and microbial genome diversity.</p>
-<ul>
-<li><a href="/site_accounts.shtml">Log in or register for a PubMLST account</a></li>
-<li><a href="/databases/">Databases</a></li>
+	<!--#include virtual="topbar.html" -->
+	<div class="expand_content">
+		<div class="panel" id="mainpanel">
+			<div id="main_container">
+				<h1>PubMLST</h1>
+				<p>Welcome to PubMLST - Public databases for molecular typing
+					and microbial genome diversity.</p>
+				<ul>
+					<li><a href="/site_accounts.shtml">Log in or register for
+							a PubMLST account</a></li>
+					<li><a href="/databases/">Databases</a></li>
+					<li><a href="/rmlst/">Species identification by ribosomal
+							MLST</a></li>
 
-<!--
+				</ul>
 
-<li><a href="/databases.shtml">Information about all species MLST databases and published schemes</a></li>
-<li><a href="/references.shtml">Recent publications that use or mention MLST</a></li>
+				<div>
+					<input type="hidden" id="colours" value="blue"></input>
+					<div id="map_container">
+						<h2 id="map_title"></h2>
+						<div id="map"></div>
+						<div id="map_link">
+							<a href="/breakdown.shtml">More details</a>
+						</div>
 
+					</div>
+					<div style="float: left">
+						<dl class="data" id="overview_stats" style="display: none">
+							<dt>isolates</dt>
+							<dd id="isolates"></dd>
+							<dt>genomes</dt>
+							<dd id="genomes"></dd>
+							<dt>alleles</dt>
+							<dd id="alleles"></dd>
+						</dl>
+					</div>
 
--->
-</ul>
-
-<div>
-<!--<input type="hidden" id="max" value="1000"></input>-->
-<!--  <input type="hidden" id="set" value="Streptococcus pneumoniae"></input>-->
-<input type="hidden" id="colours" value="blue"></input>
-<div id="map_container">
-  <h2 id="map_title"></h2>
-  <div id="map"></div>
-  <div id="map_link"><a href="/breakdown.shtml">More details</a></div>
-
-  </div>
-<div style="float:left">
-  <dl class="data" id="overview_stats" style="display:none">
-  <dt>isolates</dt><dd id="isolates"></dd>
-  <dt>genomes</dt><dd id="genomes"></dd>
-  <dt>alleles</dt><dd id="alleles"></dd>
-  </dl>
-</div>
-
-  </div>
-<div style="clear:both"></div>
+				</div>
+				<div style="clear: both"></div>
 
 
-<!--#include virtual="/announcements.html" -->
+				<!--#include virtual="/announcements.html" -->
 
-<div class="box" id="acknowledgements">
-<p>
-This site is hosted at <a href="http://www.zoo.ox.ac.uk">The Department of Zoology</a>, University of Oxford, UK and is funded by The Wellcome Trust.</p>
-</div>
-<div id="host"></div>
-</div>
-</div></div>
+				<div class="box" id="acknowledgements">
+					<p>
+						This site is hosted at <a href="http://www.zoo.ox.ac.uk">The
+							Department of Zoology</a>, University of Oxford, UK and is funded by
+						The Wellcome Trust.
+					</p>
+				</div>
+				<div id="host"></div>
+			</div>
+		</div>
+	</div>
 
-<div class="panel" id="infopanel">
+	<div class="panel" id="infopanel">
 
-  <h2>Links</h2>
-  <ul>
-    <li><a href="about.shtml">About</a></li>
-    <li><a href="/data/" title="Allelic profiles and sequences from all publicly accessible databases">Downloads</a></li>
-    <li><a href="/software/database/bigsdb/" title="Software that runs most of the databases on this site">BIGSdb</a></li>
-    <li><a href="http://bigsdb.readthedocs.org" title="User and curator guides for BIGSdb">Documentation</a></li>
-    <li><a href="/news.shtml">What's new?</a></li>
-    <li><a href="policy.shtml">Site policy</a></li>
-    <li><a href="/rest/" title="RESTful Application Programming Interface">API</a></li>
-      <li><a href="performance.shtml">Site performance</a></li>
-    <li><a href="updates.shtml">Latest updates</a></li>
-  </ul>
-    <!--#include virtual="/news.html" -->
-</div>
+		<h2>Links</h2>
+		<ul>
+			<li><a href="about.shtml">About</a></li>
+			<li><a href="/data/"
+				title="Allelic profiles and sequences from all publicly accessible databases">Downloads</a></li>
+			<li><a href="/software/database/bigsdb/"
+				title="Software that runs most of the databases on this site">BIGSdb</a></li>
+			<li><a href="http://bigsdb.readthedocs.org"
+				title="User and curator guides for BIGSdb">Documentation</a></li>
+			<li><a href="/news.shtml">What's new?</a></li>
+			<li><a href="policy.shtml">Site policy</a></li>
+			<li><a href="/rest/"
+				title="RESTful Application Programming Interface">API</a></li>
+			<li><a href="performance.shtml">Site performance</a></li>
+			<li><a href="updates.shtml">Latest updates</a></li>
+		</ul>
+		<!--#include virtual="/news.html" -->
+	</div>
 </body>
 </html>

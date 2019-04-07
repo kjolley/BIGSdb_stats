@@ -304,6 +304,7 @@ function get_monthly_taxa_data(parsed_tsv, taxon, start_date) {
 		isolates.push(this_month_isolates);
 		genomes.push(this_month_genomes);
 		sequences.push(this_month_sequences);
+		profiles.push(this_month_profiles);
 		this_month_isolates = 0;
 		this_month_genomes = 0;
 		this_month_sequences = 0;

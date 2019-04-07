@@ -45,13 +45,11 @@ embedMap.position_elements = function() {
 
 embedMap.read_data_and_create_chart = function() {
 	var url = $("#url").val();
-	if (typeof url == 'undefined'){
+	if (typeof url == 'undefined') {
 		url = '/tmp/countries.tsv';
 	}
-	d3.tsv(url, function(d) {
-		return d
-	}, function(error, rows) {
-		summary_data = embedMap.summarise(rows);
+	d3.tsv(url).then(function(data) {
+		summary_data = embedMap.summarise(data);
 		embedMap.draw_map();
 	});
 }
@@ -82,8 +80,8 @@ embedMap.get_colours = function() {
 		purple : colorbrewer.Purples[5],
 		orange : colorbrewer.Oranges[5],
 		green : colorbrewer.Greens[5],
-		red_purple: colorbrewer.RdPu[5],
-		yellow_orange_brown: colorbrewer.YlOrBr[5]
+		red_purple : colorbrewer.RdPu[5],
+		yellow_orange_brown : colorbrewer.YlOrBr[5]
 	};
 	if (typeof colours == 'undefined') {
 		return colorbrewer.Blues[5];
@@ -105,8 +103,9 @@ embedMap.finishedDrawing = function() {
 	var labels = [];
 	$.each(summary_data, function() {
 		var plural = this.isolates == 1 ? '' : 's';
-		labels[this.iso3] = this.country + "\n" + embedMap.commify(this.isolates) + " isolate"
-				+ plural + "\n" + this.label;
+		labels[this.iso3] = this.country + "\n"
+				+ embedMap.commify(this.isolates) + " isolate" + plural + "\n"
+				+ this.label;
 	});
 
 	var svg = d3.select("#map svg");
@@ -165,8 +164,9 @@ embedMap.summarise = function(data) {
 				label += "\n" + "...";
 			} else {
 				var plural = sorted[i].isolates == 1 ? '' : 's';
-				label += "\n" + sorted[i].set + ": " + embedMap.commify(sorted[i].isolates)
-						+ " isolate" + plural;
+				label += "\n" + sorted[i].set + ": "
+						+ embedMap.commify(sorted[i].isolates) + " isolate"
+						+ plural;
 			}
 		}
 		sorted_labels[country] = label;

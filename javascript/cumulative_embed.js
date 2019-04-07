@@ -33,12 +33,9 @@ cumulativeApp.read_data_and_create_chart = function() {
 	if (typeof url == 'undefined'){
 		url = '/tmp/date_entered.tsv';
 	}
-	d3.tsv(url, function(d) {
-		return d
-	}, function(error, rows) {
+	d3.tsv(url).then(function(rows) {
 		var cum_data = cumulativeApp.calc_cumulative(rows);
-		cumulativeApp.create_chart(cum_data);
-		
+		cumulativeApp.create_chart(cum_data);		
 	});
 }
 
