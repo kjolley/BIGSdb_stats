@@ -80,6 +80,7 @@ main();
 exit;
 
 sub main {
+	binmode STDOUT, ':encoding(utf8)';
 	if ( $opts{'update'} ) {
 		update_resources();
 		update_isolates();
