@@ -367,7 +367,9 @@ sub update_resources {
 					  . ' ON CONFLICT(dbase_config) DO UPDATE SET description = ?',
 					undef, @{$database}{qw(name description description)}
 				);
-				if ( $database->{'description'} =~ /(.+)\s(?:isolates|samples|sequence\/profile\ definitions)$/x ) {
+				if ( $database->{'description'} =~
+					/(.+)\s(?:isolates|samples|sequence\/profile\ definitions|sequence\ definitions)$/x )
+				{
 					$db->do( 'INSERT INTO sets (name) VALUES (?) ON CONFLICT DO NOTHING', undef, $1 );
 					$db->do( 'INSERT INTO set_resources (set_name,dbase_config) VALUES (?,?) ON CONFLICT DO NOTHING',
 						undef, $1, $database->{'name'} );
@@ -933,6 +935,7 @@ sub get_iso3 {
 		q(Tokelau)                                           => q(TKL),
 		q(Tonga)                                             => q(TON),
 		q(Trinidad & Tobago)                                 => q(TTO),
+		q(Trinidad and Tobago)                               => q(TTO),
 		q(Tunisia)                                           => q(TUN),
 		q(Turkey)                                            => q(TUR),
 		q(Turkmenistan)                                      => q(TKM),

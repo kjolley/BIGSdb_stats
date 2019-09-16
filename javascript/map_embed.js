@@ -62,7 +62,7 @@ embedMap.draw_map = function() {
 	var colours = embedMap.get_colours();
 	$('#map').html('');
 	map = d3.geomap.choropleth().geofile(
-			'/d3-geomap/topojson/world/countries.json').colors(colours).column(
+			'/javascript/topojson/countries.json').colors(colours).column(
 			'isolates').format(d3.format(",d")).legend({
 		width : 50,
 		height : 120
