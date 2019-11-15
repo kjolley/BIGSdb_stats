@@ -28,7 +28,7 @@ use JSON;
 use POSIX;
 use utf8;
 use constant STATS_DB           => 'bigsdb_stats';
-use constant HOST               => 'zoo-aberlour';
+use constant HOST               => 'zoo-lagavulin';
 use constant PORT               => 5432;
 use constant USER               => 'apache';
 use constant PASSWORD           => undef;                          #Better to set in .pgpass file or pass as option
@@ -206,7 +206,7 @@ sub get_set_updates {
 			my $url;
 			if ( $table eq 'isolates_last_modified' && $isolate_configs->{$set_name} ) {
 				$url = qq(/bigsdb?db=$isolate_configs->{$set_name}&amp;page=query&amp;)
-				  . qq(prov_field1=datestamp&amp;prov_operator1==&amp;prov_value1=$date&amp;submit=1);
+				  . qq(prov_field1=f_datestamp&amp;prov_operator1==&amp;prov_value1=$date&amp;submit=1);
 			} elsif ( $table eq 'sequences_last_modified' && $seqdef_configs->{$set_name} ) {
 				$url = qq(/bigsdb?db=$seqdef_configs->{$set_name}&amp;page=tableQuery&amp;)
 				  . qq(table=sequences&amp;s1=datestamp&amp;y1==&amp;t1=$date&amp;submit=1);
