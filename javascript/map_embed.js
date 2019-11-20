@@ -122,7 +122,7 @@ embedMap.summarise = function(data) {
 	var countries = [];
 
 	var set = $("#set").val();
-	var labels = [];
+	var counts = [];
 	var iso3_countries = embedMap.getISO3();
 	$.each(data, function() {
 		if (set && this.set_name != set) {
@@ -137,21 +137,35 @@ embedMap.summarise = function(data) {
 				label : ''
 			};
 		}
-		if (typeof labels[this.iso3] == 'undefined') {
-			labels[this.iso3] = [];
+		if (typeof counts[this.iso3] == 'undefined') {
+			counts[this.iso3] = {};
 		}
 		countries[this.iso3].isolates += +this.count;
 		if (!set) {
-			labels[this.iso3].push({
-				set : this.set_name,
-				isolates : this.count
-			});
+			if (typeof counts[this.iso3][this.set_name] == 'undefined') {
+				counts[this.iso3][this.set_name] = 0;
+			}
+			counts[this.iso3][this.set_name] += parseInt(this.count);
 		}
 		countries[this.iso3].name = iso3_countries[this.iso3];
 		if (typeof countries[this.iso3].name == 'undefined'){
 			countries[this.iso3].name = this.country;
 		}		
 	});
+	var labels = [];
+	for (var country in counts){
+		var sets = Object.keys(counts[country]);
+		for (var i = 0; i < sets.length; i++){
+			if (typeof labels[country] == 'undefined'){
+				labels[country] = [];
+			}
+			
+			labels[country].push({
+				set : sets[i],
+				isolates : counts[country][sets[i]]
+			});
+		}
+	}
 
 	var sorted_labels = [];
 	for ( var country in labels) {

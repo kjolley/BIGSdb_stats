@@ -198,8 +198,12 @@ embedMap.summarise = function(data) {
 		if (typeof sets[this.iso3] == 'undefined') {
 			sets[this.iso3] = [];
 		}
-		sets[this.iso3][this.set_name] = this.curated;
-		
+		if (typeof this.curated != 'undefined'){
+			if (typeof sets[this.iso3][this.set_name] == 'undefined'){
+				sets[this.iso3][this.set_name] = 0;
+			}
+			sets[this.iso3][this.set_name] += parseInt(this.curated);
+		}
 	});
 
 	var list = [];
@@ -211,6 +215,7 @@ embedMap.summarise = function(data) {
 			sets: sets[country]
 		});
 	}
+	console.log(list);
 	return list;
 }
 
