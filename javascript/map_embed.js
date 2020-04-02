@@ -166,6 +166,7 @@ embedMap.summarise = function(data) {
 			});
 		}
 	}
+	
 
 	var sorted_labels = [];
 	for ( var country in labels) {
@@ -192,13 +193,15 @@ embedMap.summarise = function(data) {
 
 	var list = [];
 	for ( var country in countries) {
+		var label = typeof sorted_labels[country] == 'undefined' ? '' : sorted_labels[country];
 		list.push({
 			country : countries[country].name,
 			iso3 : country,
 			isolates : countries[country].isolates,
-			label : sorted_labels[country]
+			label : label
 		});
 	}
+	
 	return list;
 }
 

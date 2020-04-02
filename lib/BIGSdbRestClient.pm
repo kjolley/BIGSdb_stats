@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Written by Keith Jolley
-#Copyright (c) 2019, University of Oxford
+#Copyright (c) 2019-2020, University of Oxford
 #E-mail: keith.jolley@zoo.ox.ac.uk
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ use Data::Random qw(rand_chars);
 use HTTP::Request::Common;
 use LWP::UserAgent;
 use Net::OAuth 0.20;
+use Config::Tiny;
+use Carp;
 $Net::OAuth::PROTOCOL_VERSION = Net::OAuth::PROTOCOL_VERSION_1_0A;
 use constant KEY_FILE => '.api_key';
 
@@ -248,6 +250,7 @@ sub _get_protected_route {
 		$self->_get_session_token();
 		( $session_token, $session_secret ) = $self->_retrieve_token('session_token');
 	}
+	state $failures = 0;
 	my $request = Net::OAuth->request('protected resource')->new(
 		consumer_key     => $key,
 		consumer_secret  => $secret,
@@ -264,6 +267,7 @@ sub _get_protected_route {
 	my $res = $self->{'user_agent'}->get( $request->to_url );
 	my $decoded_json;
 	eval { $decoded_json = decode_json( $res->content ) };
+
 	if ($@) {
 		die $res->content . "\n";
 	}
@@ -272,8 +276,8 @@ sub _get_protected_route {
 			die "Access denied - client is unauthorized.\n";
 		}
 		if ( ( $decoded_json->{'status'} // q() ) eq '401' ) {
-
-			#			say 'Invalid session token, requesting new one.';
+			$failures++;
+			croak "Failed too many times.\n" if $failures >= 10;
 			$self->_get_session_token();
 			return $self->_get_protected_route($uri);
 		}
