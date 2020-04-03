@@ -22,6 +22,7 @@ use lib "$FindBin::Bin/lib";
 use BIGSdbRestClient;
 use constant REST_URL => 'https://rest.pubmlst.org';
 my @dbases = @ARGV;
+binmode( STDOUT, ':encoding(UTF-8)' );
 
 if ( !@dbases ) {
 	say 'Usage bigsdb_quickstats.pl <config name1> [<config name2>]';
@@ -60,7 +61,7 @@ foreach my $db (@dbases) {
 				}
 			} elsif ( $scheme_list->{'records'} == 1 ) {
 				my $scheme_record = $client->get_record( $scheme_list->{'schemes'}->[0]->{'scheme'} );
-				if ($scheme_record && $scheme_record->{'records'}) {
+				if ( $scheme_record && $scheme_record->{'records'} ) {
 					$buffer .= qq(Profiles ($scheme_record->{'description'}): $scheme_record->{'records'}<br />\n);
 					if ( $scheme_record->{'last_updated'} && $scheme_record->{'last_updated'} gt $last_updated ) {
 						$last_updated = $scheme_record->{'last_updated'};
