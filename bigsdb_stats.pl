@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Written by Keith Jolley
-#Copyright (c) 2019, University of Oxford
+#Copyright (c) 2019-2020, University of Oxford
 #E-mail: keith.jolley@zoo.ox.ac.uk
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -70,7 +70,7 @@ if ( $opts{'setup'} ) {
 	$client->get_access_token;
 	exit;
 }
-my %allowed_formats = map { $_ => 1 } qw(JSON TSV);
+my %allowed_formats = map { $_ => 1 } qw(CSV JSON TSV);
 $opts{'format'} //= 'JSON';
 if ( !$allowed_formats{ $opts{'format'} } ) {
 	die "Invalid format.\n";
@@ -113,6 +113,10 @@ sub output_stats {
 	}
 	if ( $opts{'stats'} eq 'countries' ) {
 		output_countries();
+		return;
+	}
+	if ( $opts{'stats'} eq 'summary' ) {
+		output_summary();
 		return;
 	}
 	die "Invalid stats option.\n";
@@ -175,6 +179,69 @@ sub output_countries {
 	foreach my $record (@$data) {
 		my $code = $iso3->{ $record->{'country'} } // q();
 		say qq($record->{'set_name'}\t$record->{'country'}\t$code\t$record->{'count'});
+	}
+	return;
+}
+
+sub output_summary {
+	$db->do('CREATE TEMP TABLE summaries AS SELECT * FROM sets ORDER BY name');
+	$db->do('ALTER TABLE summaries ADD id text');
+	$db->do('ALTER TABLE summaries ADD typing_url text');
+	$db->do('ALTER TABLE summaries ADD isolates_url text');
+	$db->do('ALTER TABLE summaries ADD isolates_updated date');
+	$db->do('ALTER TABLE summaries ADD genomes_updated date');
+	$db->do('ALTER TABLE summaries ADD sequences_updated date');
+	my $configs = run_query( 'SELECT * FROM set_resources', undef, { fetch => 'all_arrayref', slice => {} } );
+
+	foreach my $config (@$configs) {
+		if ( $config->{'dbase_config'} =~ /pubmlst_(\D+)_seqdef$/x ) {
+			$db->do(
+				'UPDATE summaries SET (id,typing_url)=(?,?) WHERE name=?',
+				undef, $1, "$opts{'bigsdb_url'}?db=$config->{'dbase_config'}",
+				$config->{'set_name'}
+			);
+		}
+		if ( $config->{'dbase_config'} =~ /isolates$/x ) {
+			$db->do(
+				'UPDATE summaries SET isolates_url=? WHERE name=?', undef,
+				"$opts{'bigsdb_url'}?db=$config->{'dbase_config'}", $config->{'set_name'}
+			);
+		}
+		my $isolates_updated = run_query( 'SELECT MAX(datestamp) FROM isolates_last_modified WHERE dbase_config=?',
+			$config->{'dbase_config'} );
+		if ($isolates_updated) {
+			$db->do( 'UPDATE summaries SET isolates_updated=? WHERE name=?',
+				undef, $isolates_updated, $config->{'set_name'} );
+		}
+		my $genomes_updated = run_query( 'SELECT MAX(datestamp) FROM genomes_last_modified WHERE dbase_config=?',
+			$config->{'dbase_config'} );
+		if ($genomes_updated) {
+			$db->do( 'UPDATE summaries SET genomes_updated=? WHERE name=?',
+				undef, $genomes_updated, $config->{'set_name'} );
+		}
+		my $sequences_updated = run_query( 'SELECT MAX(datestamp) FROM sequences_last_modified WHERE dbase_config=?',
+			$config->{'dbase_config'} );
+		if ($sequences_updated) {
+			$db->do( 'UPDATE summaries SET sequences_updated=? WHERE name=?',
+				undef, $sequences_updated, $config->{'set_name'} );
+		}
+	}
+	my $data = run_query( 'SELECT * FROM summaries ORDER BY name', undef, { fetch => 'all_arrayref', slice => {} } );
+	$db->do('DROP TABLE summaries');
+	if ( $opts{'format'} eq 'JSON' ) {
+		say encode_json($data);
+		return;
+	} else {
+		local $" = $opts{'format'} eq 'CSV' ? q(,) : qq(\t);
+		my @fields = qw(id name isolates genomes sequences typing_url isolates_url
+		  isolates_updated genomes_updated sequences_updated);
+		say qq(@fields);
+		foreach my $record (@$data) {
+			foreach my $field (@fields) {
+				$record->{$field} = 'undef' if !defined $record->{$field};
+			}
+			say qq(@{$record}{@fields});
+		}
 	}
 	return;
 }
@@ -368,7 +435,7 @@ sub update_resources {
 					undef, @{$database}{qw(name description description)}
 				);
 				if ( $database->{'description'} =~
-					/(.+)\s(?:isolates|samples|sequence\/profile\ definitions|sequence\ definitions)$/x )
+					/(.+)\s(?:isolates|samples|records|sequence|\/profile\ definitions|sequence\ definitions)$/x )
 				{
 					$db->do( 'INSERT INTO sets (name) VALUES (?) ON CONFLICT DO NOTHING', undef, $1 );
 					$db->do( 'INSERT INTO set_resources (set_name,dbase_config) VALUES (?,?) ON CONFLICT DO NOTHING',
@@ -648,7 +715,7 @@ ${bold}--days$norm [${under}DAYS$norm]
     Number of days to produce link for. Default:3.
     
 ${bold}--format$norm [${under}FORMAT$norm]
-    Output format. Allowed values: JSON, TSV (default JSON).
+    Output format. Allowed values: CSV, JSON, TSV (default JSON).
 
 ${bold}--help$norm
     This help page.
@@ -669,7 +736,8 @@ ${bold}--setup_access$norm
     Authenticate and delegate access to retrieve an access token.
     
 ${bold}--stats$norm [${under}FUNCTION$norm]
-    Output stats. Available options: countries, datestamp, date_entered, links, totals
+    Output stats. Available options: countries, datestamp, date_entered, links, 
+    summary, totals
     
 ${bold}--update$norm
 	Update stats database.
