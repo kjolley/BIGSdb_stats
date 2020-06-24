@@ -191,6 +191,7 @@ sub output_summary {
 	$db->do('ALTER TABLE summaries ADD isolates_updated date');
 	$db->do('ALTER TABLE summaries ADD genomes_updated date');
 	$db->do('ALTER TABLE summaries ADD sequences_updated date');
+	$db->do('ALTER TABLE summaries ADD profiles int');
 	my $configs = run_query( 'SELECT * FROM set_resources', undef, { fetch => 'all_arrayref', slice => {} } );
 
 	foreach my $config (@$configs) {
@@ -225,6 +226,12 @@ sub output_summary {
 			$db->do( 'UPDATE summaries SET sequences_updated=? WHERE name=?',
 				undef, $sequences_updated, $config->{'set_name'} );
 		}
+		if ( $config->{'set_name'} eq 'Ribosomal MLST' ) {
+			my $profiles = run_query( 'SELECT SUM(count) FROM profiles_date_entered WHERE (dbase_config,scheme)=(?,?)',
+				[ 'pubmlst_rmlst_seqdef', 'Ribosomal MLST' ] );
+			$db->do( 'UPDATE summaries SET profiles=? WHERE name=?', undef, $profiles, 'Ribosomal MLST' )
+			  ;
+		}
 	}
 	my $data = run_query( 'SELECT * FROM summaries ORDER BY name', undef, { fetch => 'all_arrayref', slice => {} } );
 	$db->do('DROP TABLE summaries');
@@ -233,7 +240,7 @@ sub output_summary {
 		return;
 	} else {
 		local $" = $opts{'format'} eq 'CSV' ? q(,) : qq(\t);
-		my @fields = qw(id name isolates genomes sequences typing_url isolates_url
+		my @fields = qw(id name isolates genomes sequences profiles typing_url isolates_url
 		  isolates_updated genomes_updated sequences_updated);
 		say qq(@fields);
 		foreach my $record (@$data) {
