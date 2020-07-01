@@ -163,22 +163,52 @@ sub output_recent_links {
 sub output_countries {
 	my $iso3 = get_iso3();
 	my $data = run_query(
-		'SELECT r.set_name,c.country,c.count FROM countries c JOIN set_resources r ON '
-		  . 'c.dbase_config=r.dbase_config ORDER BY c.country,r.set_name',
+		q(SELECT SUBSTRING(r.dbase_config,'pubmlst_(\D+)_isolates') AS id,r.set_name,c.country,c.count FROM )
+		  . q(countries c JOIN set_resources r ON c.dbase_config=r.dbase_config ORDER BY c.country,r.set_name),
 		undef,
 		{ fetch => 'all_arrayref', slice => {} }
 	);
+	my $data_hash = {};
 	foreach my $record (@$data) {
-		$record->{'iso3'} = $iso3->{ $record->{'country'} } if $iso3->{ $record->{'country'} };
+		next if !$iso3->{ $record->{'country'} };
+		#Group all UK countries together.
+		if ($record->{'country'} =~ /^UK \[/x){
+			$record->{'country'} = 'UK';
+		}
+		
+		$record->{'iso3'} = $iso3->{ $record->{'country'} };
+		if (defined $data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } ) {
+			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'count'} += $record->{'count'};
+		} else {
+			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } = {
+				set_name => $record->{'set_name'},
+				country  => $record->{'country'},
+				count    => $record->{'count'}
+			};
+		}
+	}
+	my $filtered;
+	foreach my $id ( sort keys %$data_hash ) {
+		foreach my $iso3 ( sort keys %{ $data_hash->{$id} } ) {
+			my $record = $data_hash->{$id}->{$iso3};
+			push @$filtered,
+			  {
+				id       => $id,
+				set_name => $record->{'set_name'},
+				iso3     => $iso3,
+				country  => $record->{'country'},
+				count    => $record->{'count'}
+			  };
+		}
 	}
 	if ( $opts{'format'} eq 'JSON' ) {
-		say encode_json($data);
+		say encode_json($filtered);
 		return;
 	}
-	say qq(set_name\tcountry\tiso3\tcount);
-	foreach my $record (@$data) {
+	say qq(id\tset_name\tcountry\tiso3\tcount);
+	foreach my $record (@$filtered) {
 		my $code = $iso3->{ $record->{'country'} } // q();
-		say qq($record->{'set_name'}\t$record->{'country'}\t$code\t$record->{'count'});
+		say qq($record->{'id'}\t$record->{'set_name'}\t$record->{'country'}\t$code\t$record->{'count'});
 	}
 	return;
 }
@@ -229,8 +259,7 @@ sub output_summary {
 		if ( $config->{'set_name'} eq 'Ribosomal MLST' ) {
 			my $profiles = run_query( 'SELECT SUM(count) FROM profiles_date_entered WHERE (dbase_config,scheme)=(?,?)',
 				[ 'pubmlst_rmlst_seqdef', 'Ribosomal MLST' ] );
-			$db->do( 'UPDATE summaries SET profiles=? WHERE name=?', undef, $profiles, 'Ribosomal MLST' )
-			  ;
+			$db->do( 'UPDATE summaries SET profiles=? WHERE name=?', undef, $profiles, 'Ribosomal MLST' );
 		}
 	}
 	my $data = run_query( 'SELECT * FROM summaries ORDER BY name', undef, { fetch => 'all_arrayref', slice => {} } );
