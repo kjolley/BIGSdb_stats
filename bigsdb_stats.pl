@@ -82,11 +82,10 @@ exit;
 sub main {
 	binmode STDOUT, ':encoding(utf8)';
 	if ( $opts{'update'} ) {
-
-		#		update_resources();
-		#		update_isolates();
-		#		update_sequences();
-		#		update_profiles();
+		update_resources();
+		update_isolates();
+		update_sequences();
+		update_profiles();
 		update_countries();
 	}
 	if ( $opts{'stats'} ) {
@@ -195,7 +194,8 @@ sub output_countries {
 			my $record = $data_hash->{$id}->{$iso3};
 			( my $url = qq(https://pubmlst.org/bigsdb?db=pubmlst_${id}_isolates&page=query&prov_field1=f_country&)
 				  . qq(prov_value1=$record->{'country'}&submit=1) ) =~ s/\s/%20/gx;
-			push @$filtered, {
+			push @$filtered,
+			  {
 				id       => $id,
 				set_name => $record->{'set_name'},
 				iso3     => $iso3,
@@ -203,7 +203,7 @@ sub output_countries {
 				count    => $record->{'count'},
 				genomes  => $record->{'genomes'},
 				url      => $url
-			};
+			  };
 		}
 	}
 	if ( $opts{'format'} eq 'JSON' ) {
