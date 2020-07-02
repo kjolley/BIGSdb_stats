@@ -113,6 +113,7 @@ CREATE TABLE countries (
 	dbase_config text NOT NULL,
 	country text NOT NULL,
 	count int NOT NULL,
+	genomes int NOT NULL,
 	PRIMARY KEY (dbase_config,country),
 	CONSTRAINT c_dbase_config FOREIGN KEY (dbase_config) REFERENCES resources
 	ON DELETE CASCADE

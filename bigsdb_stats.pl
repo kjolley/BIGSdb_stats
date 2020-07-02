@@ -82,10 +82,11 @@ exit;
 sub main {
 	binmode STDOUT, ':encoding(utf8)';
 	if ( $opts{'update'} ) {
-		update_resources();
-		update_isolates();
-		update_sequences();
-		update_profiles();
+
+		#		update_resources();
+		#		update_isolates();
+		#		update_sequences();
+		#		update_profiles();
 		update_countries();
 	}
 	if ( $opts{'stats'} ) {
@@ -163,7 +164,7 @@ sub output_recent_links {
 sub output_countries {
 	my $iso3 = get_iso3();
 	my $data = run_query(
-		q(SELECT SUBSTRING(r.dbase_config,'pubmlst_(\D+)_isolates') AS id,r.set_name,c.country,c.count FROM )
+		q(SELECT SUBSTRING(r.dbase_config,'pubmlst_(\D+)_isolates') AS id,r.set_name,c.country,c.count,c.genomes FROM )
 		  . q(countries c JOIN set_resources r ON c.dbase_config=r.dbase_config ORDER BY c.country,r.set_name),
 		undef,
 		{ fetch => 'all_arrayref', slice => {} }
@@ -171,19 +172,20 @@ sub output_countries {
 	my $data_hash = {};
 	foreach my $record (@$data) {
 		next if !$iso3->{ $record->{'country'} };
+
 		#Group all UK countries together.
-		if ($record->{'country'} =~ /^UK \[/x){
+		if ( $record->{'country'} =~ /^UK \[/x ) {
 			$record->{'country'} = 'UK';
 		}
-		
 		$record->{'iso3'} = $iso3->{ $record->{'country'} };
-		if (defined $data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } ) {
+		if ( defined $data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } ) {
 			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'count'} += $record->{'count'};
 		} else {
 			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } = {
 				set_name => $record->{'set_name'},
 				country  => $record->{'country'},
-				count    => $record->{'count'}
+				count    => $record->{'count'},
+				genomes  => $record->{'genomes'}
 			};
 		}
 	}
@@ -191,24 +193,30 @@ sub output_countries {
 	foreach my $id ( sort keys %$data_hash ) {
 		foreach my $iso3 ( sort keys %{ $data_hash->{$id} } ) {
 			my $record = $data_hash->{$id}->{$iso3};
-			push @$filtered,
-			  {
+			( my $url = qq(https://pubmlst.org/bigsdb?db=pubmlst_${id}_isolates&page=query&prov_field1=f_country&)
+				  . qq(prov_value1=$record->{'country'}&submit=1) ) =~ s/\s/%20/gx;
+			push @$filtered, {
 				id       => $id,
 				set_name => $record->{'set_name'},
 				iso3     => $iso3,
 				country  => $record->{'country'},
-				count    => $record->{'count'}
-			  };
+				count    => $record->{'count'},
+				genomes  => $record->{'genomes'},
+				url      => $url
+			};
 		}
 	}
 	if ( $opts{'format'} eq 'JSON' ) {
 		say encode_json($filtered);
 		return;
 	}
-	say qq(id\tset_name\tcountry\tiso3\tcount);
+	my $divider = $opts{'format'} eq 'TSV' ? qq(\t) : q(,);
+	local $" = $divider;
+	my @fields = qw(id set_name country iso3 count genomes url);
+	say qq(@fields);
 	foreach my $record (@$filtered) {
 		my $code = $iso3->{ $record->{'country'} } // q();
-		say qq($record->{'id'}\t$record->{'set_name'}\t$record->{'country'}\t$code\t$record->{'count'});
+		say qq(@{$record}{@fields});
 	}
 	return;
 }
@@ -623,6 +631,15 @@ sub update_countries {
 				foreach my $country ( keys %$breakdown ) {
 					$db->do( 'INSERT INTO countries (dbase_config,country,count) VALUES (?,?,?)',
 						undef, $config, $country, $breakdown->{$country} );
+				}
+				my $genome_breakdown = $client->get_record("$field->{'breakdown'}?genomes=1");
+				foreach my $country ( keys %$breakdown ) {
+					$genome_breakdown->{$country} //= 0;
+					$db->do(
+						'UPDATE countries SET genomes=? WHERE (dbase_config,country) = (?,?)',
+						undef, $genome_breakdown->{$country},
+						$config, $country
+					);
 				}
 			}
 		}
