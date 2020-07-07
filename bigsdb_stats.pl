@@ -626,19 +626,16 @@ sub update_countries {
 				next if $field->{'name'} ne 'country';
 				next if !$field->{'allowed_values'};
 				next if !$field->{'breakdown'};
-				my $breakdown = $client->get_record( $field->{'breakdown'} );
-				$db->do( 'DELETE FROM countries WHERE dbase_config=?', undef, $config );
-				foreach my $country ( keys %$breakdown ) {
-					$db->do( 'INSERT INTO countries (dbase_config,country,count) VALUES (?,?,?)',
-						undef, $config, $country, $breakdown->{$country} );
-				}
+				my $breakdown        = $client->get_record( $field->{'breakdown'} );
 				my $genome_breakdown = $client->get_record("$field->{'breakdown'}?genomes=1");
+				$db->do( 'DELETE FROM countries WHERE dbase_config=?', undef, $config );
 				foreach my $country ( keys %$breakdown ) {
 					$genome_breakdown->{$country} //= 0;
 					$db->do(
-						'UPDATE countries SET genomes=? WHERE (dbase_config,country) = (?,?)',
-						undef, $genome_breakdown->{$country},
-						$config, $country
+						'INSERT INTO countries (dbase_config,country,count,genomes) VALUES (?,?,?,?)',
+						undef, $config, $country,
+						$breakdown->{$country},
+						$genome_breakdown->{$country}
 					);
 				}
 			}
