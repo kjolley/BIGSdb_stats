@@ -192,7 +192,7 @@ sub output_countries {
 	foreach my $id ( sort keys %$data_hash ) {
 		foreach my $iso3 ( sort keys %{ $data_hash->{$id} } ) {
 			my $record = $data_hash->{$id}->{$iso3};
-			( my $url = qq(https://pubmlst.org/bigsdb?db=pubmlst_${id}_isolates&page=query&prov_field1=f_country&)
+			( my $url = qq($opts{'bigsdb_url'}?db=pubmlst_${id}_isolates&page=query&prov_field1=f_country&)
 				  . qq(prov_value1=$record->{'country'}&submit=1) ) =~ s/\s/%20/gx;
 			push @$filtered,
 			  {
