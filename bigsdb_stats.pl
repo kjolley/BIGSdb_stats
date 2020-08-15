@@ -479,7 +479,7 @@ sub update_resources {
 					undef, @{$database}{qw(name description description)}
 				);
 				if ( $database->{'description'} =~
-					/(.+)\s(?:isolates|samples|records|sequence|\/profile\ definitions|sequence\ definitions)$/x )
+					/(.+)\s(?:isolates|samples|records|sequence\/profile\ definitions|sequence\ definitions)$/x )
 				{
 					$db->do( 'INSERT INTO sets (name) VALUES (?) ON CONFLICT DO NOTHING', undef, $1 );
 					$db->do( 'INSERT INTO set_resources (set_name,dbase_config) VALUES (?,?) ON CONFLICT DO NOTHING',
