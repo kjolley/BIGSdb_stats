@@ -70,7 +70,7 @@ if ( $opts{'setup'} ) {
 	$client->get_access_token;
 	exit;
 }
-my %allowed_formats = map { $_ => 1 } qw(CSV JSON TSV);
+my %allowed_formats = map { $_ => 1 } qw(CSV JSON TSV flat_list);
 $opts{'format'} //= 'JSON';
 if ( !$allowed_formats{ $opts{'format'} } ) {
 	die "Invalid format.\n";
@@ -147,15 +147,28 @@ sub output_recent_links {
 	my $date_list = get_list_of_dates();
 	foreach my $date (@$date_list) {
 		my $sets = get_dbase_set_updated_on($date);
-		say qq(<b>$date</b>);
-		say q(<ul>);
-		foreach my $set_name (@$sets) {
-			say qq(<li>$set_name:<ul>);
-			my $set_updates = get_set_updates( $set_name, $date );
-			say qq(<li>$_</li>) foreach @$set_updates;
-			say q(</ul></li>);
+		if ( ( $opts{'format'} // q() ) eq 'flat_list' ) {
+			say qq(<b>$date:</b>);
+			say q(<ul>);
+			foreach my $set_name (@$sets) {
+				say qq(<li>$set_name: );
+				my $set_updates = get_set_updates( $set_name, $date );
+				local $" = q(; );
+				say qq(@$set_updates);
+				say q(</li>);
+			}
+			say q(</ul>);
+		} else {
+			say qq(<b>$date</b>);
+			say q(<ul>);
+			foreach my $set_name (@$sets) {
+				say qq(<li>$set_name:<ul>);
+				my $set_updates = get_set_updates( $set_name, $date );
+				say qq(<li>$_</li>) foreach @$set_updates;
+				say q(</ul></li>);
+			}
+			say q(</ul>);
 		}
-		say q(</ul>);
 	}
 	return;
 }
@@ -240,10 +253,11 @@ sub output_summary {
 				$config->{'set_name'}
 			);
 		}
-		if ( $config->{'dbase_config'} =~ /isolates$/x ) {
+		if ( $config->{'dbase_config'} =~ /pubmlst_(\D+)_isolates$/x ) {
 			$db->do(
-				'UPDATE summaries SET isolates_url=? WHERE name=?', undef,
-				"$opts{'bigsdb_url'}?db=$config->{'dbase_config'}", $config->{'set_name'}
+				'UPDATE summaries SET (id,isolates_url)=(?,?) WHERE name=?',
+				undef, $1, "$opts{'bigsdb_url'}?db=$config->{'dbase_config'}",
+				$config->{'set_name'}
 			);
 		}
 		my $isolates_updated = run_query( 'SELECT MAX(datestamp) FROM isolates_last_modified WHERE dbase_config=?',
@@ -277,13 +291,32 @@ sub output_summary {
 		return;
 	} else {
 		local $" = $opts{'format'} eq 'CSV' ? q(,) : qq(\t);
-		my @fields = qw(id name isolates genomes sequences profiles typing_url isolates_url
+		my @fields = qw(id name formatted_name isolates genomes sequences profiles typing_url isolates_url
 		  isolates_updated genomes_updated sequences_updated);
 		say qq(@fields);
+		my %exceptions = (
+			'Plasmid MLST'            => 'Plasmid MLST',
+			'Oral Streptococcus spp.' => 'Oral <i>Streptococcus</i> spp.',
+			'Streptococcus bovis/equinus complex (SBSEC)' =>
+			  '<i>Streptococcus bovis/equinus</i> complex (SBSEC)'
+		);
+		my %ignore = map { $_ => 1 } qw(fish);
 		foreach my $record (@$data) {
+
+			if ( $record->{'name'} =~ /^(.+)\s(spp.|complex)$/x ) {
+				$record->{'formatted_name'} = qq(<i>$1</i> $2);
+			}
+			if ( $record->{'name'} =~ /^Candidatus\s(.+)/x ) {
+				$record->{'formatted_name'} = qq{&quot;<i>Candidatus</i> $1&quot;};
+			}
+			if ( $exceptions{ $record->{'name'} } ) {
+				$record->{'formatted_name'} = $exceptions{ $record->{'name'} };
+			}
+			$record->{'formatted_name'} //= qq(<i>$record->{'name'}</i>);
 			foreach my $field (@fields) {
 				$record->{$field} = 'undef' if !defined $record->{$field};
 			}
+			next if $ignore{ $record->{'id'} };
 			say qq(@{$record}{@fields});
 		}
 	}
@@ -468,7 +501,7 @@ sub output_date_analysis {
 sub update_resources {
 	my $ignore_config_list = get_ignore_config_list();
 	my %ignore             = map { $_ => 1 } @$ignore_config_list;
-	my $data               = $client->get_record( $opts{'url'} );
+	my $data               = $client->get_record( "$opts{'url'}?show_all=1" );
 	eval {
 		foreach my $group (@$data) {
 			foreach my $database ( @{ $group->{'databases'} } ) {
@@ -502,7 +535,7 @@ sub get_ignore_config_list {
 	my @passed_list = split /,/x, $opts{'ignore_group'};
 	my %ignore_group = map { $_ => 1 } ( IGNORE_GROUP, @passed_list );
 	my $list         = [];
-	my $data         = $client->get_record( $opts{'url'} );
+	my $data         = $client->get_record( "$opts{'url'}?show_all=1" );
 	foreach my $group (@$data) {
 		if ( $ignore_group{ $group->{'name'} } ) {
 			foreach my $resource ( @{ $group->{'databases'} } ) {
@@ -519,11 +552,16 @@ sub update_totals {
 	foreach my $type (qw(isolates genomes sequences)) {
 		if ( $data->{$type} ) {
 			my $type_record = $client->get_record( $data->{$type} );
-			$db->do(
-				"UPDATE sets SET $type=? WHERE name=(SELECT set_name FROM set_resources WHERE dbase_config=?)",
-				undef, $type_record->{'records'},
-				$database->{'name'}
-			);
+			eval {
+				$db->do(
+					"UPDATE sets SET $type=? WHERE name=(SELECT set_name FROM set_resources WHERE dbase_config=?)",
+					undef, $type_record->{'records'},
+					$database->{'name'}
+				);
+			};
+			if ($@) {
+				say "Problem with $database->{'name'}. $@.\n";
+			}
 		}
 	}
 	return;
@@ -765,7 +803,8 @@ ${bold}--days$norm [${under}DAYS$norm]
     Number of days to produce link for. Default:3.
     
 ${bold}--format$norm [${under}FORMAT$norm]
-    Output format. Allowed values: CSV, JSON, TSV (default JSON).
+    Output format. Allowed values: CSV, JSON, TSV (default JSON), flat_list 
+    (when used for outputting recent links).
 
 ${bold}--help$norm
     This help page.
