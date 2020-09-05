@@ -277,7 +277,7 @@ sub _get_protected_route {
 		}
 		if ( ( $decoded_json->{'status'} // q() ) eq '401' ) {
 			$failures++;
-			croak "Failed too many times.\n" if $failures >= 10;
+			croak "$uri: Failed too many times.\n" if $failures >= 10;
 			$self->_get_session_token();
 			return $self->_get_protected_route($uri);
 		}
