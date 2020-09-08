@@ -186,8 +186,13 @@ sub output_countries {
 		next if !$iso3->{ $record->{'country'} };
 
 		#Group all UK countries together.
-		if ( $record->{'country'} =~ /^UK \[/x ) {
+		if ( $record->{'country'} =~ /^UK\ \[/x ) {
 			$record->{'country'} = 'UK';
+		}
+
+		#Group China, Hong Kong, and Macao.
+		if ( $record->{'country'} =~ /^China\ \[/x ) {
+			$record->{'country'} = 'China';
 		}
 		$record->{'iso3'} = $iso3->{ $record->{'country'} };
 		if ( defined $data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } ) {
@@ -301,11 +306,10 @@ sub output_summary {
 			'Ribosomal MLST'                              => 'Ribosomal MLST',
 			'Sandbox'                                     => 'Sandbox',
 			'Streptococcus bovis/equinus complex (SBSEC)' => '<i>Streptococcus bovis/equinus</i> complex (SBSEC)',
-			'Treponema pallidum subsp. pallidum' => '<i>Treponema pallidum</i> subsp. <i>pallidum</i>'
+			'Treponema pallidum subsp. pallidum'          => '<i>Treponema pallidum</i> subsp. <i>pallidum</i>'
 		);
 		my %ignore = map { $_ => 1 } qw(fish);
 		foreach my $record (@$data) {
-
 			if ( $record->{'name'} =~ /^(.+)\s(spp.|complex)$/x ) {
 				$record->{'formatted_name'} = qq(<i>$1</i> $2);
 			}
@@ -897,7 +901,9 @@ sub get_iso3 {
 		q(Chile)                                             => q(CHL),
 		q(China)                                             => q(CHN),
 		q(Hong Kong, Special Administrative Region of China) => q(HKG),
+		q(China [Hong Kong])                                 => q(HKG),
 		q(Macao, Special Administrative Region of China)     => q(MAC),
+		q(China [Macao])                                     => q(MAC),
 		q(Christmas Island)                                  => q(CXR),
 		q(Cocos (Keeling) Islands)                           => q(CCK),
 		q(Colombia)                                          => q(COL),
