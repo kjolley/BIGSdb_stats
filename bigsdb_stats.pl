@@ -295,10 +295,13 @@ sub output_summary {
 		  isolates_updated genomes_updated sequences_updated);
 		say qq(@fields);
 		my %exceptions = (
-			'Plasmid MLST'            => 'Plasmid MLST',
-			'Oral Streptococcus spp.' => 'Oral <i>Streptococcus</i> spp.',
-			'Streptococcus bovis/equinus complex (SBSEC)' =>
-			  '<i>Streptococcus bovis/equinus</i> complex (SBSEC)'
+			'Lactococcus lactis 936-like bacteriophage'   => '<i>Lactococcus lactis</i> 936-like bacteriophage',
+			'Plasmid MLST'                                => 'Plasmid MLST',
+			'Oral Streptococcus spp.'                     => 'Oral <i>Streptococcus</i> spp.',
+			'Ribosomal MLST'                              => 'Ribosomal MLST',
+			'Sandbox'                                     => 'Sandbox',
+			'Streptococcus bovis/equinus complex (SBSEC)' => '<i>Streptococcus bovis/equinus</i> complex (SBSEC)',
+			'Treponema pallidum subsp. pallidum' => '<i>Treponema pallidum</i> subsp. <i>pallidum</i>'
 		);
 		my %ignore = map { $_ => 1 } qw(fish);
 		foreach my $record (@$data) {
@@ -501,7 +504,7 @@ sub output_date_analysis {
 sub update_resources {
 	my $ignore_config_list = get_ignore_config_list();
 	my %ignore             = map { $_ => 1 } @$ignore_config_list;
-	my $data               = $client->get_record( "$opts{'url'}?show_all=1" );
+	my $data               = $client->get_record("$opts{'url'}?show_all=1");
 	eval {
 		foreach my $group (@$data) {
 			foreach my $database ( @{ $group->{'databases'} } ) {
@@ -535,7 +538,7 @@ sub get_ignore_config_list {
 	my @passed_list = split /,/x, $opts{'ignore_group'};
 	my %ignore_group = map { $_ => 1 } ( IGNORE_GROUP, @passed_list );
 	my $list         = [];
-	my $data         = $client->get_record( "$opts{'url'}?show_all=1" );
+	my $data         = $client->get_record("$opts{'url'}?show_all=1");
 	foreach my $group (@$data) {
 		if ( $ignore_group{ $group->{'name'} } ) {
 			foreach my $resource ( @{ $group->{'databases'} } ) {
