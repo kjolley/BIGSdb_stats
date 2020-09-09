@@ -83,6 +83,7 @@ sub main {
 	binmode STDOUT, ':encoding(utf8)';
 	if ( $opts{'update'} ) {
 		update_resources();
+		update_hide_status();
 		update_isolates();
 		update_sequences();
 		update_profiles();
@@ -407,8 +408,8 @@ sub get_dbase_set_updated_on {
 	my $list   = {};
 	foreach my $table (@tables) {
 		my $table_list = run_query(
-			"SELECT DISTINCT(s.set_name) FROM $table t JOIN set_resources s ON "
-			  . 't.dbase_config=s.dbase_config WHERE t.datestamp=?',
+			"SELECT DISTINCT(sr.set_name) FROM $table t JOIN set_resources sr ON "
+			  . 't.dbase_config=sr.dbase_config JOIN sets s ON sr.set_name=s.name WHERE t.datestamp=? AND NOT s.hide',
 			$date,
 			{ fetch => 'col_arrayref' }
 		);
@@ -514,9 +515,9 @@ sub update_resources {
 			foreach my $database ( @{ $group->{'databases'} } ) {
 				next if $ignore{ $database->{'name'} };
 				$db->do(
-					' INSERT INTO resources( dbase_config, description ) VALUES(?,?) '
+					' INSERT INTO resources( dbase_config, description, hide ) VALUES(?,?,?) '
 					  . ' ON CONFLICT(dbase_config) DO UPDATE SET description = ?',
-					undef, @{$database}{qw(name description description)}
+					undef, @{$database}{qw(name description description)}, 0
 				);
 				if ( $database->{'description'} =~
 					/(.+)\s(?:isolates|samples|records|sequence\/profile\ definitions|sequence\ definitions)$/x )
@@ -535,6 +536,55 @@ sub update_resources {
 	}
 	$db->commit;
 	return;
+}
+
+sub update_hide_status {
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my $public_configs     = get_public_configs();
+	my %public             = map { $_ => 1 } @$public_configs;
+	my $data               = $client->get_record("$opts{'url'}?show_all=1");
+	eval {
+		foreach my $group (@$data) {
+			foreach my $database ( @{ $group->{'databases'} } ) {
+				my $hide = $public{ $database->{'name'} } ? 0 : 1;
+				$db->do( 'UPDATE resources SET hide = ? WHERE dbase_config=?', undef, $hide, $database->{'name'} );
+			}
+		}
+		my $sets = run_query( 'SELECT name FROM sets', undef, { fetch => 'col_arrayref' } );
+		foreach my $set_name (@$sets) {
+			my $hide          = 1;
+			my $set_resources = run_query( 'SELECT dbase_config FROM set_resources WHERE set_name=?',
+				$set_name, { fetch => 'col_arrayref' } );
+			foreach my $dbase_config (@$set_resources) {
+				if ( $public{$dbase_config} ) {
+					$hide = 0;
+					last;
+				}
+			}
+			$db->do( 'UPDATE sets SET hide = ? WHERE name=?', undef, $hide, $set_name );
+		}
+	};
+	if ($@) {
+		$db->rollback;
+		die "$@\n";
+	}
+	$db->commit;
+	return;
+}
+
+sub get_public_configs {
+	my $ignore_config_list = get_ignore_config_list();
+	my %ignore             = map { $_ => 1 } @$ignore_config_list;
+	my $data               = $client->get_record("$opts{'url'}");
+	my $configs            = [];
+	foreach my $group (@$data) {
+		foreach my $database ( @{ $group->{'databases'} } ) {
+			next if $ignore{ $database->{'name'} };
+			push @$configs, $database->{'name'};
+		}
+	}
+	return $configs;
 }
 
 sub get_ignore_config_list {

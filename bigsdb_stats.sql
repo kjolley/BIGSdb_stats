@@ -1,6 +1,7 @@
 CREATE TABLE resources (
 	dbase_config text NOT NULL,
 	description text NOT NULL,
+	hide boolean NOT NULL,
 	PRIMARY KEY (dbase_config)
 );
 
@@ -9,6 +10,7 @@ CREATE TABLE sets (
 	isolates int NOT NULL DEFAULT 0,
 	genomes int NOT NULL DEFAULT 0,
 	sequences int NOT NULL DEFAULT 0,
+	hide boolean NOT NULL,
 	PRIMARY KEY (name)
 );
 
