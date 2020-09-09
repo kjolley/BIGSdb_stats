@@ -515,9 +515,9 @@ sub update_resources {
 			foreach my $database ( @{ $group->{'databases'} } ) {
 				next if $ignore{ $database->{'name'} };
 				$db->do(
-					' INSERT INTO resources( dbase_config, description, hide ) VALUES(?,?,?) '
+					' INSERT INTO resources( dbase_config, description, hide ) VALUES(?,?,FALSE) '
 					  . ' ON CONFLICT(dbase_config) DO UPDATE SET description = ?',
-					undef, @{$database}{qw(name description description)}, 0
+					undef, @{$database}{qw(name description description)}
 				);
 				if ( $database->{'description'} =~
 					/(.+)\s(?:isolates|samples|records|sequence\/profile\ definitions|sequence\ definitions)$/x )
