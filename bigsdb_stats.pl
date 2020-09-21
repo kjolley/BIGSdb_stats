@@ -152,7 +152,8 @@ sub output_recent_links {
 			say qq(<b>$date:</b>);
 			say q(<ul>);
 			foreach my $set_name (@$sets) {
-				say qq(<li>$set_name: );
+				my $formatted_name = get_formatted_name($set_name);
+				say qq(<li>$formatted_name: );
 				my $set_updates = get_set_updates( $set_name, $date );
 				local $" = q(; );
 				say qq(@$set_updates);
@@ -163,7 +164,8 @@ sub output_recent_links {
 			say qq(<b>$date</b>);
 			say q(<ul>);
 			foreach my $set_name (@$sets) {
-				say qq(<li>$set_name:<ul>);
+				my $formatted_name = get_formatted_name($set_name);
+				say qq(<li>$formatted_name:<ul>);
 				my $set_updates = get_set_updates( $set_name, $date );
 				say qq(<li>$_</li>) foreach @$set_updates;
 				say q(</ul></li>);
@@ -198,6 +200,7 @@ sub output_countries {
 		$record->{'iso3'} = $iso3->{ $record->{'country'} };
 		if ( defined $data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } ) {
 			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'count'} += $record->{'count'};
+			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'genomes'} += $record->{'genomes'};
 		} else {
 			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } = {
 				set_name => $record->{'set_name'},
@@ -300,27 +303,9 @@ sub output_summary {
 		my @fields = qw(id name formatted_name isolates genomes sequences profiles typing_url isolates_url
 		  isolates_updated genomes_updated sequences_updated);
 		say qq(@fields);
-		my %exceptions = (
-			'Lactococcus lactis 936-like bacteriophage'   => '<i>Lactococcus lactis</i> 936-like bacteriophage',
-			'Plasmid MLST'                                => 'Plasmid MLST',
-			'Oral Streptococcus spp.'                     => 'Oral <i>Streptococcus</i> spp.',
-			'Ribosomal MLST'                              => 'Ribosomal MLST',
-			'Sandbox'                                     => 'Sandbox',
-			'Streptococcus bovis/equinus complex (SBSEC)' => '<i>Streptococcus bovis/equinus</i> complex (SBSEC)',
-			'Treponema pallidum subsp. pallidum'          => '<i>Treponema pallidum</i> subsp. <i>pallidum</i>'
-		);
 		my %ignore = map { $_ => 1 } qw(fish);
 		foreach my $record (@$data) {
-			if ( $record->{'name'} =~ /^(.+)\s(spp.|complex)$/x ) {
-				$record->{'formatted_name'} = qq(<i>$1</i> $2);
-			}
-			if ( $record->{'name'} =~ /^Candidatus\s(.+)/x ) {
-				$record->{'formatted_name'} = qq{&quot;<i>Candidatus</i> $1&quot;};
-			}
-			if ( $exceptions{ $record->{'name'} } ) {
-				$record->{'formatted_name'} = $exceptions{ $record->{'name'} };
-			}
-			$record->{'formatted_name'} //= qq(<i>$record->{'name'}</i>);
+			$record->{'formatted_name'} = get_formatted_name( $record->{'name'} );
 			foreach my $field (@fields) {
 				$record->{$field} = 'undef' if !defined $record->{$field};
 			}
@@ -329,6 +314,29 @@ sub output_summary {
 		}
 	}
 	return;
+}
+
+sub get_formatted_name {
+	my ($name) = @_;
+	my %exceptions = (
+		'Lactococcus lactis 936-like bacteriophage'   => '<i>Lactococcus lactis</i> 936-like bacteriophage',
+		'Plasmid MLST'                                => 'Plasmid MLST',
+		'Oral Streptococcus spp.'                     => 'Oral <i>Streptococcus</i> spp.',
+		'Ribosomal MLST'                              => 'Ribosomal MLST',
+		'Sandbox'                                     => 'Sandbox',
+		'Streptococcus bovis/equinus complex (SBSEC)' => '<i>Streptococcus bovis/equinus</i> complex (SBSEC)',
+		'Treponema pallidum subsp. pallidum'          => '<i>Treponema pallidum</i> subsp. <i>pallidum</i>'
+	);
+	if ( $name =~ /^(.+)\s(spp.|complex)$/x ) {
+		return qq(<i>$1</i> $2);
+	}
+	if ( $name =~ /^Candidatus\s(.+)/x ) {
+		return qq{&quot;<i>Candidatus</i> $1&quot;};
+	}
+	if ( $exceptions{$name} ) {
+		return $exceptions{$name};
+	}
+	return qq(<i>$name</i>);
 }
 
 sub get_set_updates {
