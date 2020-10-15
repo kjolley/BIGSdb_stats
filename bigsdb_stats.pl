@@ -199,7 +199,7 @@ sub output_countries {
 		}
 		$record->{'iso3'} = $iso3->{ $record->{'country'} };
 		if ( defined $data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } ) {
-			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'count'} += $record->{'count'};
+			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'count'}   += $record->{'count'};
 			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} }->{'genomes'} += $record->{'genomes'};
 		} else {
 			$data_hash->{ $record->{'id'} }->{ $record->{'iso3'} } = {
@@ -248,6 +248,7 @@ sub output_summary {
 	$db->do('ALTER TABLE summaries ADD id text');
 	$db->do('ALTER TABLE summaries ADD typing_url text');
 	$db->do('ALTER TABLE summaries ADD isolates_url text');
+	$db->do('ALTER TABLE summaries ADD genomes_url text');
 	$db->do('ALTER TABLE summaries ADD isolates_updated date');
 	$db->do('ALTER TABLE summaries ADD genomes_updated date');
 	$db->do('ALTER TABLE summaries ADD sequences_updated date');
@@ -268,6 +269,17 @@ sub output_summary {
 				undef, $1, "$opts{'bigsdb_url'}?db=$config->{'dbase_config'}",
 				$config->{'set_name'}
 			);
+			my $isolates = run_query( 'SELECT genomes FROM summaries WHERE name=?', $config->{'set_name'} );
+			if ($isolates) {
+				$db->do(
+					'UPDATE summaries SET (id,genomes_url)=(?,?) WHERE name=?',
+					undef,
+					$1,
+					"$opts{'bigsdb_url'}?db=$config->{'dbase_config'}&page=query&linked_sequences_list="
+					  . 'Any sequence data&submit=1',
+					$config->{'set_name'}
+				);
+			}
 		}
 		my $isolates_updated = run_query( 'SELECT MAX(datestamp) FROM isolates_last_modified WHERE dbase_config=?',
 			$config->{'dbase_config'} );
@@ -301,7 +313,7 @@ sub output_summary {
 	} else {
 		local $" = $opts{'format'} eq 'CSV' ? q(,) : qq(\t);
 		my @fields = qw(id name formatted_name isolates genomes sequences profiles typing_url isolates_url
-		  isolates_updated genomes_updated sequences_updated);
+		  genomes_url isolates_updated genomes_updated sequences_updated);
 		say qq(@fields);
 		my %ignore = map { $_ => 1 } qw(fish);
 		foreach my $record (@$data) {
