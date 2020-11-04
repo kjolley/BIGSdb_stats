@@ -387,6 +387,7 @@ sub get_set_updates {
 			if ($url) {
 				$link .= qq(<a href="$url">);
 			}
+			$count = commify($count);
 			$link .= qq($count $name{$table}$plural);
 			if ($url) {
 				$link .= q(</a>);
@@ -413,7 +414,8 @@ sub get_set_updates {
 		if ($url) {
 			$link .= qq(<a href="$url">);
 		}
-		$link .= qq($scheme->{'count'} $name profile$plural);
+		my $count = commify($scheme->{'count'});
+		$link .= qq($count $name profile$plural);
 		if ($url) {
 			$link .= q(</a>);
 		}
@@ -1203,4 +1205,13 @@ sub get_iso3 {
 		q(USSR)                                              => q(SUN),
 		q(Tahiti)                                            => q(PYF),
 	};
+}
+
+#Put commas in numbers
+#Perl Cookbook 2.16
+sub commify {
+	my ($text) = @_;
+	$text = reverse $text;
+	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/gx;
+	return scalar reverse $text;
 }
