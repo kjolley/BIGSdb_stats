@@ -908,7 +908,7 @@ ${bold}--stats$norm [${under}FUNCTION$norm]
     summary, totals
     
 ${bold}--update$norm
-	Update stats database.
+    Update stats database.
     
 ${bold}--url$norm [${under}URL$norm]
     URL of the REST API.
