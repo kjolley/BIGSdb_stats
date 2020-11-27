@@ -14,6 +14,7 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with BIGSdb.  If not, see <http://www.gnu.org/licenses/>.
+#Version:20201127
 use strict;
 use warnings;
 use 5.010;
@@ -32,7 +33,7 @@ use constant HOST               => 'zoo-lagavulin';
 use constant PORT               => 5432;
 use constant USER               => 'apache';
 use constant PASSWORD           => undef;                          #Better to set in .pgpass file or pass as option
-use constant DEFAULT_REST_URL   => 'http://rest.pubmlst.org';
+use constant DEFAULT_REST_URL   => 'https://rest.pubmlst.org';
 use constant DEFAULT_BIGSDB_URL => 'https://pubmlst.org/bigsdb';
 use constant IGNORE_GROUP       => 'test';
 my %opts;
@@ -275,8 +276,7 @@ sub output_summary {
 					'UPDATE summaries SET (id,genomes_url)=(?,?) WHERE name=?',
 					undef,
 					$1,
-					"$opts{'bigsdb_url'}?db=$config->{'dbase_config'}&page=query&linked_sequences_list="
-					  . 'Any sequence data&submit=1',
+					"$opts{'bigsdb_url'}?db=$config->{'dbase_config'}&page=query&genomes=1",
 					$config->{'set_name'}
 				);
 			}
@@ -414,7 +414,7 @@ sub get_set_updates {
 		if ($url) {
 			$link .= qq(<a href="$url">);
 		}
-		my $count = commify($scheme->{'count'});
+		my $count = commify( $scheme->{'count'} );
 		$link .= qq($count $name profile$plural);
 		if ($url) {
 			$link .= q(</a>);
