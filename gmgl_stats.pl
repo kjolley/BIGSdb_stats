@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Written by Keith Jolley
-#Copyright (c) 2019, University of Oxford
+#Copyright (c) 2019-2020, University of Oxford
 #E-mail: keith.jolley@zoo.ox.ac.uk
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with BIGSdb.  If not, see <http://www.gnu.org/licenses/>.
+#Version: 20201209
 use strict;
 use warnings;
 use 5.010;
@@ -24,13 +25,13 @@ use lib "$FindBin::Bin/lib";
 use BIGSdb::Constants qw(COUNTRIES);
 use BIGSdbRestClient;
 use JSON;
-use constant REST_URL      => 'http://rest.pubmlst.org';
+use constant REST_URL      => 'https://rest.pubmlst.org';
 use constant BIGSDB_URL    => 'https://pubmlst.org/bigsdb';
 use constant DBASE_CONFIGS => (
 	{
 		name           => 'Neisseria meningitidis',
-		config         => 'pubmlst_neisseria_isolates',
-		curated_config => 'pubmlst_neisseria_mrfgenomes'
+		config         => 'pubmlst_neisseria_isolates_nmeningitidis',
+		curated_config => 'pubmlst_neisseria_gmgl'
 	},
 	{
 		name           => 'Streptococcus pneumoniae',
