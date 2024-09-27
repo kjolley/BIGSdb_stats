@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Written by Keith Jolley
-#Copyright (c) 2019-2020, University of Oxford
+#Copyright (c) 2019-2024, University of Oxford
 #E-mail: keith.jolley@zoo.ox.ac.uk
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -211,6 +211,7 @@ sub get_record {
 	if ( $uri =~ /$self->{'rest_url'}\/db\/([\w\d\-_]+)/x ) {
 		$config = $1;
 	}
+	$authenticated_dbs{$config} = 1;#Need to log into all PubMLST databases now to get recent updates.
 	if ( !$authenticated_dbs{$config} ) {
 		for my $attempt ( 1 .. 30 ) {
 			$response = $self->{'user_agent'}->get($uri);
