@@ -23,7 +23,7 @@
 @import "/css/d3.geomap.css";
 </style>
 <script src="/javascript/jquery.min.js"></script>
-<script src="/javascript/d3.v5.min.js"></script>
+<script src="/javascript/d3.v6.min.js"></script>
 <script src="/javascript/overview_stats.js?v=1" async></script>
 <script src="/pubmlst.js" async></script>
 <script src="/javascript/d3-geo-projection.min.js" async></script>

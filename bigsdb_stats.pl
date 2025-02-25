@@ -29,7 +29,7 @@ use JSON;
 use POSIX;
 use utf8;
 use constant STATS_DB           => 'bigsdb_stats';
-use constant HOST               => 'zoo-lagavulin';
+use constant HOST               => 'localhost';
 use constant PORT               => 5432;
 use constant USER               => 'apache';
 use constant PASSWORD           => undef;                          #Better to set in .pgpass file or pass as option
