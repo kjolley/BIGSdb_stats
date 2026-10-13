@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #Written by Keith Jolley
-#Copyright (c) 2019-2020, University of Oxford
+#Copyright (c) 2019-2026, University of Oxford
 #E-mail: keith.jolley@zoo.ox.ac.uk
 #This is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with BIGSdb.  If not, see <http://www.gnu.org/licenses/>.
-#Version:20201127
+#Version:20261013
 use strict;
 use warnings;
 use 5.010;
@@ -239,6 +239,9 @@ sub output_countries {
 	say qq(@fields);
 	foreach my $record (@$filtered) {
 		my $code = $iso3->{ $record->{'country'} } // q();
+		if ($divider eq q(,) && $record->{'country'} =~ /,/x){
+			$record->{'country'} = qq("$record->{'country'}");
+		}
 		say qq(@{$record}{@fields});
 	}
 	return;
